@@ -7,7 +7,8 @@
       "Bash(chmod +x /Users/xavier/Projects/Hephaestus/Code/hephaestus/install.sh)",
       "Bash(npm install *)",
       "Bash(npm run *)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Bash(git commit *)"
     ]
   }
 }

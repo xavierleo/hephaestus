@@ -125,12 +125,35 @@ export function mergeWithDetected(
   detected: Partial<WizardConfig>,
 ): WizardConfig {
   const p = profile.config
+  const puid = detected.puid ?? p.puid
+  const dockerRootless = p.dockerRootless
 
-  // TODO: Implement the merge logic.
-  // Use the rules in the comment above: detected wins for puid/pgid/tz/gpuCard/gpuRender/renderGid,
-  // saved (p) wins for everything else.
-  // Call deriveDockerSocketPath(dockerRootless, puid) to compute dockerSocketPath.
-  // Set selectedServices from profile.defaultServices.
-  // nasPass must be undefined (never stored in profile).
-  throw new Error('mergeWithDetected not yet implemented — see src/profile/index.ts')
+  return {
+    // saved values win — user explicitly configured these
+    baseDir:          p.baseDir,
+    stacksDir:        p.stacksDir,
+    domain:           p.domain,
+    hostIp:           p.hostIp,
+    mediaDir:         p.mediaDir,
+    hasNas:           p.hasNas,
+    nasMountPath:     p.nasMountPath,
+    nasIp:            p.nasIp,
+    nasShare:         p.nasShare,
+    nasUser:          p.nasUser,
+    nasPass:          undefined,
+    dockerRootless,
+    hasGpu:           p.hasGpu,
+
+    // detected values win — reflect current machine's reality
+    puid,
+    pgid:             detected.pgid      ?? p.pgid,
+    tz:               detected.tz        ?? p.tz,
+    gpuCard:          detected.gpuCard   ?? p.gpuCard   ?? '',
+    gpuRender:        detected.gpuRender ?? p.gpuRender ?? '',
+    renderGid:        detected.renderGid ?? p.renderGid ?? 0,
+
+    // derived + from profile
+    dockerSocketPath: deriveDockerSocketPath(dockerRootless, puid),
+    selectedServices: profile.defaultServices,
+  }
 }
