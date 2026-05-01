@@ -56,7 +56,7 @@ if [[ -n "${HEPHAESTUS_VERSION:-}" ]]; then
   TAG="v${HEPHAESTUS_VERSION#v}"
 else
   TAG="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
-    | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": "\(.*\)".*/\1/')"
+    | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": "\(.*\)".*/\1/')" || true
 fi
 
 if [[ -z "$TAG" ]]; then
