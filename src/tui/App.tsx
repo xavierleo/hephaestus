@@ -72,7 +72,7 @@ export function App({ flags }: AppProps) {
       setConfig(prev => ({ ...prev, ...detectedValues }))
       setScreen(flags.stacksOnly ? 'SERVICE_SELECTOR' : 'WELCOME')
     })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   const updateConfig = (updates: Partial<WizardConfig>) => {
     setConfig(prev => ({ ...prev, ...updates }))

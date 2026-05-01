@@ -58,7 +58,7 @@ export function Progress({ config, flags, onDone }: Props) {
       })
 
     return () => clearInterval(timer)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   const DIVIDER = '─'.repeat(75)
 

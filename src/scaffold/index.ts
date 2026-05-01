@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync, chmodSync, renameSync, readFileSync, existsSync } from 'fs'
-import { join, dirname } from 'path'
+import { join } from 'path'
 import { parse as parseYaml } from 'yaml'
 import type { WizardConfig } from '../types/config.js'
 import { recipeMap } from '../recipes/registry.js'

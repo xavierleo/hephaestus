@@ -10,7 +10,7 @@ interface Props {
 
 type Field = 'name' | 'description'
 
-export function SaveProfile({ config, onSave, onSkip }: Props) {
+export function SaveProfile({ config: _config, onSave, onSkip }: Props) {
   const defaultName = process.env['USER'] ?? 'my-server'
   const [name, setName] = useState(defaultName)
   const [description, setDescription] = useState('')

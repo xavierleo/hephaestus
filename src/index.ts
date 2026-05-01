@@ -143,7 +143,7 @@ profileCmd
   .action(async (filePath: string) => {
     const readline = await import('readline')
     const { readFileSync } = await import('fs')
-    const { loadProfiles, saveProfile } = await import('./profile/index.js')
+    const { loadProfiles } = await import('./profile/index.js')
 
     let parsed: unknown
     try {

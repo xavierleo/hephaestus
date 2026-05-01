@@ -3,7 +3,7 @@ import { Box, Text, useInput } from 'ink'
 import type { WizardConfig } from '../../types/config.js'
 import type { Category } from '../../recipes/types.js'
 import { CATEGORY_LABELS } from '../../recipes/types.js'
-import { recipesByCategory, allRecipes } from '../../recipes/registry.js'
+import { recipesByCategory } from '../../recipes/registry.js'
 
 interface Props {
   config: Partial<WizardConfig>
