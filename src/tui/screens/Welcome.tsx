@@ -207,13 +207,14 @@ export function Welcome({ preflight, activeProfile, onNext, onLoadProfile, onMan
             {activeProfile.description ? <Text dimColor>  — {activeProfile.description}</Text> : null}
           </Box>
           <Text dimColor>{DIVIDER}</Text>
-          <Box><Text dimColor>{'  Base dir'.padEnd(16)}</Text><Text>{activeProfile.config.baseDir}</Text></Box>
-          <Box><Text dimColor>{'  Stacks dir'.padEnd(16)}</Text><Text>{activeProfile.config.stacksDir}</Text></Box>
-          <Box><Text dimColor>{'  Domain'.padEnd(16)}</Text><Text>{activeProfile.config.domain || '(none)'}</Text></Box>
-          <Box>
-            <Text dimColor>{'  Services'.padEnd(16)}</Text>
-            <Text>{activeProfile.defaultServices.length} services (your last selection)</Text>
-          </Box>
+          <CheckRow label="  Base dir" value={activeProfile.config.baseDir} />
+          <CheckRow label="  Stacks dir" value={activeProfile.config.stacksDir} />
+          <CheckRow label="  Domain" value={activeProfile.config.domain || '(none)'} />
+          <CheckRow label="  Services" value={
+            activeProfile.defaultServices.length === 0
+              ? 'none saved'
+              : `${activeProfile.defaultServices.length} services (your last selection)`
+          } />
           <Box marginTop={1}>
             <Text bold>[L]</Text><Text dimColor> Load profile   </Text>
             <Text bold>[N]</Text><Text dimColor> Start fresh   </Text>
