@@ -33,27 +33,64 @@ interface FieldDef {
   secret?: boolean
   boolean?: boolean
   showWhen?: (fields: FieldValues) => boolean
+  validate?: (value: string, fields: FieldValues) => string | null
 }
 
 type FieldValues = Record<FieldKey, string>
 
+function validateAbsPath(value: string): string | null {
+  if (!value.trim()) return 'Required'
+  if (!value.startsWith('/')) return 'Must be an absolute path (start with /)'
+  return null
+}
+
+function validateUid(value: string): string | null {
+  const n = parseInt(value, 10)
+  if (isNaN(n) || String(n) !== value.trim() || n < 0 || n > 65535) {
+    return 'Must be a number between 0 and 65535'
+  }
+  return null
+}
+
+function validateDomain(value: string): string | null {
+  if (!value) return null // optional
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/.test(value)) {
+    return 'Must be a valid domain (e.g. example.com) or leave empty'
+  }
+  return null
+}
+
+function validateDevice(value: string, fields: FieldValues): string | null {
+  if (fields.hasGpu !== 'true') return null
+  if (!value.startsWith('/dev/dri/')) return 'Must be a /dev/dri/ path'
+  return null
+}
+
 const FIELD_DEFS: FieldDef[] = [
-  { key: 'baseDir', label: 'Base data directory', hint: 'service configs and SQLite databases — must be local' },
-  { key: 'stacksDir', label: 'Stacks directory', hint: 'compose.yml + .env files — Dockge watches this' },
-  { key: 'puid', label: 'PUID' },
-  { key: 'pgid', label: 'PGID' },
+  {
+    key: 'baseDir', label: 'Base data directory',
+    hint: 'service configs and SQLite databases — must be local',
+    validate: validateAbsPath,
+  },
+  {
+    key: 'stacksDir', label: 'Stacks directory',
+    hint: 'compose.yml + .env files — Dockge watches this',
+    validate: validateAbsPath,
+  },
+  { key: 'puid', label: 'PUID', validate: validateUid },
+  { key: 'pgid', label: 'PGID', validate: validateUid },
   { key: 'tz', label: 'Timezone' },
   { key: 'hostIp', label: 'Server IP' },
-  { key: 'domain', label: 'Public domain (optional)' },
+  { key: 'domain', label: 'Public domain (optional)', validate: validateDomain },
   { key: 'hasNas', label: 'Mount a NAS via CIFS?', boolean: true },
   { key: 'nasIp', label: 'NAS IP', showWhen: f => f.hasNas === 'true' },
   { key: 'nasShare', label: 'Share name', showWhen: f => f.hasNas === 'true' },
-  { key: 'nasMountPath', label: 'Mount point', showWhen: f => f.hasNas === 'true' },
+  { key: 'nasMountPath', label: 'Mount point', showWhen: f => f.hasNas === 'true', validate: validateAbsPath },
   { key: 'nasUser', label: 'Username', showWhen: f => f.hasNas === 'true' },
   { key: 'nasPass', label: 'Password', showWhen: f => f.hasNas === 'true', secret: true },
   { key: 'hasGpu', label: 'Enable AMD VAAPI transcoding?', boolean: true },
-  { key: 'gpuCard', label: 'Card device', showWhen: f => f.hasGpu === 'true' },
-  { key: 'gpuRender', label: 'Render device', showWhen: f => f.hasGpu === 'true' },
+  { key: 'gpuCard', label: 'Card device', showWhen: f => f.hasGpu === 'true', validate: validateDevice },
+  { key: 'gpuRender', label: 'Render device', showWhen: f => f.hasGpu === 'true', validate: validateDevice },
 ]
 
 const DIVIDER = '─'.repeat(51)
@@ -103,19 +140,36 @@ function fieldsToConfig(fields: FieldValues): Partial<WizardConfig> {
   }
 }
 
+function getError(field: FieldDef, fields: FieldValues): string | null {
+  return field.validate ? field.validate(fields[field.key], fields) : null
+}
+
 export function Config({ config, onNext, onBack }: Props) {
   const [fields, setFields] = useState<FieldValues>(configToFields(config))
   const [activeIdx, setActiveIdx] = useState(0)
+  const [showErrors, setShowErrors] = useState(false)
 
   const visibleFields = FIELD_DEFS.filter(f => !f.showWhen || f.showWhen(fields))
   const activeField = visibleFields[activeIdx]
+
+  const errors = Object.fromEntries(
+    visibleFields
+      .map(f => [f.key, getError(f, fields)])
+      .filter(([, e]) => e !== null),
+  ) as Record<FieldKey, string>
+
+  const hasErrors = Object.keys(errors).length > 0
 
   useInput((input, key) => {
     if (!activeField) return
 
     if (key.tab || key.return) {
       if (activeIdx === visibleFields.length - 1) {
-        onNext(fieldsToConfig(fields))
+        if (hasErrors) {
+          setShowErrors(true)
+        } else {
+          onNext(fieldsToConfig(fields))
+        }
       } else {
         setActiveIdx(prev => prev + 1)
       }
@@ -138,7 +192,6 @@ export function Config({ config, onNext, onBack }: Props) {
     }
 
     if (activeField.boolean) {
-      // Boolean fields: y/n or space to toggle
       if (input === 'y' || input === 'Y' || input === ' ') {
         setFields(prev => ({ ...prev, [activeField.key]: 'true' }))
       } else if (input === 'n' || input === 'N') {
@@ -167,11 +220,12 @@ export function Config({ config, onNext, onBack }: Props) {
         const isActive = idx === activeIdx
         const value = fields[field.key]
         const display = field.secret && value ? '•'.repeat(value.length) : value
+        const error = showErrors || isActive ? errors[field.key] : null
 
         if (field.boolean) {
           const isTrue = value === 'true'
           return (
-            <Box key={field.key} marginBottom={idx < visibleFields.length - 1 ? 0 : 0}>
+            <Box key={field.key}>
               <Text color={isActive ? 'cyan' : undefined} bold={isActive}>
                 {field.label}{'  '}
               </Text>
@@ -191,6 +245,7 @@ export function Config({ config, onNext, onBack }: Props) {
               {isActive && <Text color="cyan">█</Text>}
             </Box>
             {isActive && field.hint && <Text dimColor>({field.hint})</Text>}
+            {error && <Text color="red">⚠ {error}</Text>}
           </Box>
         )
       })}
