@@ -14,6 +14,7 @@ program
   .option('--dry-run', 'Preview everything without writing any files', false)
   .option('--stacks-only', 'Re-scaffold stacks, skip system setup screens', false)
   .option('--list', 'Print available services and exit', false)
+  .option('--profile <name>', 'Load a saved profile by name')
 
 program
   .command('update')
@@ -27,7 +28,164 @@ program
     console.log('✓ Hephaestus updated successfully')
   })
 
-program.action((options: { dryRun: boolean; stacksOnly: boolean; list: boolean }) => {
+const profileCmd = program
+  .command('profile')
+  .description('Manage saved profiles')
+
+profileCmd
+  .command('list')
+  .description('List all saved profiles')
+  .action(async () => {
+    const { loadProfiles } = await import('./profile/index.js')
+    const store = loadProfiles()
+    const names = Object.keys(store.profiles)
+    if (names.length === 0) {
+      console.log('No profiles saved yet. Run hephaestus to create one.')
+      return
+    }
+    console.log('')
+    for (const name of names) {
+      const p = store.profiles[name]!
+      const active = store.activeProfile === name ? ' ★' : '  '
+      const updated = new Date(p.updatedAt).toLocaleDateString()
+      const desc = p.description ? `  ${p.description}` : ''
+      console.log(`${active} ${name.padEnd(20)} ${String(p.defaultServices.length).padStart(2)} services   updated ${updated}${desc}`)
+    }
+    console.log('')
+  })
+
+profileCmd
+  .command('show [name]')
+  .description('Show full config for a profile (defaults to active profile)')
+  .action(async (name?: string) => {
+    const { loadProfiles } = await import('./profile/index.js')
+    const store = loadProfiles()
+    const profileName = name ?? store.activeProfile
+    if (!profileName) {
+      console.error('No profile name given and no active profile set.')
+      process.exit(1)
+    }
+    const profile = store.profiles[profileName]
+    if (!profile) {
+      console.error(`Profile "${profileName}" not found.`)
+      process.exit(1)
+    }
+    console.log(`\nProfile: ${profile.name}${store.activeProfile === profileName ? ' ★' : ''}`)
+    if (profile.description) console.log(`Description: ${profile.description}`)
+    console.log(`Created:  ${profile.createdAt}`)
+    console.log(`Updated:  ${profile.updatedAt}`)
+    console.log(`Services: ${profile.defaultServices.join(', ')}`)
+    console.log('\nConfig:')
+    for (const [k, v] of Object.entries(profile.config)) {
+      console.log(`  ${k.padEnd(18)} ${v}`)
+    }
+    console.log('')
+  })
+
+profileCmd
+  .command('use <name>')
+  .description('Set the active profile')
+  .action(async (name: string) => {
+    const { setActiveProfile } = await import('./profile/index.js')
+    try {
+      setActiveProfile(name)
+      console.log(`✓ Active profile set to "${name}"`)
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err))
+      process.exit(1)
+    }
+  })
+
+profileCmd
+  .command('delete <name>')
+  .description('Delete a profile (prompts for confirmation)')
+  .action(async (name: string) => {
+    const readline = await import('readline')
+    const { loadProfiles, deleteProfile } = await import('./profile/index.js')
+    const store = loadProfiles()
+    if (!store.profiles[name]) {
+      console.error(`Profile "${name}" not found.`)
+      process.exit(1)
+    }
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+    rl.question(`Delete profile "${name}"? This cannot be undone. [y/N] `, answer => {
+      rl.close()
+      if (answer.toLowerCase() !== 'y') {
+        console.log('Aborted.')
+        return
+      }
+      void (async () => {
+        const { deleteProfile: del } = await import('./profile/index.js')
+        del(name)
+        console.log(`✓ Deleted "${name}"`)
+      })()
+    })
+  })
+
+profileCmd
+  .command('export <name> [output-path]')
+  .description('Export a profile to a JSON file (no secrets)')
+  .action(async (name: string, outputPath?: string) => {
+    const { loadProfiles } = await import('./profile/index.js')
+    const { writeFileSync } = await import('fs')
+    const store = loadProfiles()
+    const profile = store.profiles[name]
+    if (!profile) {
+      console.error(`Profile "${name}" not found.`)
+      process.exit(1)
+    }
+    const out = outputPath ?? `${name}-profile.json`
+    writeFileSync(out, JSON.stringify(profile, null, 2), 'utf-8')
+    console.log(`✓ Exported "${name}" to ${out}`)
+  })
+
+profileCmd
+  .command('import <file-path>')
+  .description('Import a profile from a JSON file')
+  .action(async (filePath: string) => {
+    const readline = await import('readline')
+    const { readFileSync } = await import('fs')
+    const { loadProfiles, saveProfile } = await import('./profile/index.js')
+
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(readFileSync(filePath, 'utf-8'))
+    } catch {
+      console.error(`Could not read "${filePath}"`)
+      process.exit(1)
+    }
+
+    if (
+      typeof parsed !== 'object' || parsed === null ||
+      !('name' in parsed) || typeof (parsed as Record<string, unknown>)['name'] !== 'string' ||
+      !('config' in parsed) || !('defaultServices' in parsed)
+    ) {
+      console.error('File does not look like a valid Hephaestus profile export.')
+      process.exit(1)
+    }
+
+    const p = parsed as { name: string; config: Record<string, unknown>; defaultServices: string[]; description?: string }
+
+    const doImport = async () => {
+      const { saveProfile: save } = await import('./profile/index.js')
+      save(p.name, p.config as never, p.defaultServices, p.description ?? '')
+      console.log(`✓ Imported profile "${p.name}"`)
+    }
+
+    const store = loadProfiles()
+    if (store.profiles[p.name]) {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+      rl.question(`Profile "${p.name}" already exists. Overwrite? [y/N] `, answer => {
+        rl.close()
+        if (answer.toLowerCase() !== 'y') { console.log('Aborted.'); return }
+        void doImport()
+      })
+    } else {
+      await doImport()
+    }
+  })
+
+program.action((options: { dryRun: boolean; stacksOnly: boolean; list: boolean; profile?: string }) => {
   if (options.list) {
     printServiceList()
     process.exit(0)
@@ -37,6 +195,7 @@ program.action((options: { dryRun: boolean; stacksOnly: boolean; list: boolean }
     dryRun: options.dryRun,
     stacksOnly: options.stacksOnly,
     list: options.list,
+    profileName: options.profile,
   }
 
   const { waitUntilExit } = render(React.createElement(App, { flags }))
