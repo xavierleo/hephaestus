@@ -159,7 +159,7 @@ describe('saveProfile', () => {
 
     // Also verify via the typed store
     const store = loadProfiles(profilesPath)
-    const savedConfig = store.profiles['secured']!.config as Record<string, unknown>
+    const savedConfig = store.profiles['secured']!.config as unknown as Record<string, unknown>
     expect(savedConfig).not.toHaveProperty('nasPass')
   })
 })
@@ -259,7 +259,7 @@ describe('mergeWithDetected', () => {
   it('nasPass is undefined in the merged result even if injected into profile config', () => {
     const profile = makeProfile()
     // Simulate a corrupted or hand-edited profile that somehow has nasPass
-    ;(profile.config as Record<string, unknown>)['nasPass'] = 'injected-secret'
+    ;(profile.config as unknown as Record<string, unknown>)['nasPass'] = 'injected-secret'
     const detected: Partial<WizardConfig> = { puid: 1001 }
 
     const result = mergeWithDetected(profile, detected)
