@@ -7,6 +7,8 @@ export type WizardScreen =
   | 'REVIEW'
   | 'PROGRESS'
   | 'DONE'
+  | 'SAVE_PROFILE'
+  | 'PROFILE_MANAGER'
 
 export const SCREEN_ORDER: WizardScreen[] = [
   'LOADING',
@@ -58,6 +60,7 @@ export interface AppFlags {
   dryRun: boolean
   stacksOnly: boolean
   list: boolean
+  profileName?: string  // --profile <name>
 }
 
 export function nextScreen(current: WizardScreen): WizardScreen {
