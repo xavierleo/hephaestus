@@ -162,7 +162,7 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
       if (!dryRun) {
         const envPath = join(stackDir, '.env')
         const existingEnv = parseEnvFile(envPath)
-        const addedKeys = existingEnv.size > 0 ? findNewEnvKeys(envContent, existingEnv) : []
+        const addedKeys = findNewEnvKeys(envContent, existingEnv)
         const finalEnv = existingEnv.size > 0 ? mergeEnvContent(envContent, existingEnv) : envContent
         if (addedKeys.length > 0) newEnvVars.set(recipe.id, addedKeys)
         atomicWrite(envPath, finalEnv)
