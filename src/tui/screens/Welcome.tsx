@@ -1,10 +1,14 @@
 import React from 'react'
 import { Box, Text, useInput } from 'ink'
 import type { PreflightResult } from '../../system/checks.js'
+import type { Profile } from '../../profile/types.js'
 
 interface Props {
   preflight: PreflightResult
+  activeProfile?: Profile | null
   onNext: () => void
+  onLoadProfile?: () => void
+  onManageProfiles?: () => void
 }
 
 const DIVIDER = '─'.repeat(51)
@@ -31,9 +35,16 @@ function CheckRow({
   )
 }
 
-export function Welcome({ preflight, onNext }: Props) {
-  useInput((_input, key) => {
-    if (key.return) onNext()
+export function Welcome({ preflight, activeProfile, onNext, onLoadProfile, onManageProfiles }: Props) {
+  useInput((input, key) => {
+    if (activeProfile) {
+      const lower = input.toLowerCase()
+      if (lower === 'l') onLoadProfile?.()
+      if (lower === 'n') onNext()
+      if (lower === 'm') onManageProfiles?.()
+    } else {
+      if (key.return) onNext()
+    }
   })
 
   // Docker label — distinguish between not installed, daemon down, and running
@@ -187,13 +198,37 @@ export function Welcome({ preflight, onNext }: Props) {
         </Box>
       )}
 
-      <Box marginTop={1}>
-        <Text dimColor>Press </Text>
-        <Text bold>Enter</Text>
-        <Text dimColor> to continue   </Text>
-        <Text bold>q</Text>
-        <Text dimColor>: quit</Text>
-      </Box>
+      {activeProfile ? (
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>{DIVIDER}</Text>
+          <Box>
+            <Text color="cyan" bold>  Saved profile: </Text>
+            <Text bold>{activeProfile.name}</Text>
+            {activeProfile.description ? <Text dimColor>  — {activeProfile.description}</Text> : null}
+          </Box>
+          <Text dimColor>{DIVIDER}</Text>
+          <Box><Text dimColor>{'  Base dir'.padEnd(16)}</Text><Text>{activeProfile.config.baseDir}</Text></Box>
+          <Box><Text dimColor>{'  Stacks dir'.padEnd(16)}</Text><Text>{activeProfile.config.stacksDir}</Text></Box>
+          <Box><Text dimColor>{'  Domain'.padEnd(16)}</Text><Text>{activeProfile.config.domain || '(none)'}</Text></Box>
+          <Box>
+            <Text dimColor>{'  Services'.padEnd(16)}</Text>
+            <Text>{activeProfile.defaultServices.length} services (your last selection)</Text>
+          </Box>
+          <Box marginTop={1}>
+            <Text bold>[L]</Text><Text dimColor> Load profile   </Text>
+            <Text bold>[N]</Text><Text dimColor> Start fresh   </Text>
+            <Text bold>[M]</Text><Text dimColor> Manage profiles</Text>
+          </Box>
+        </Box>
+      ) : (
+        <Box marginTop={1}>
+          <Text dimColor>Press </Text>
+          <Text bold>Enter</Text>
+          <Text dimColor> to continue   </Text>
+          <Text bold>q</Text>
+          <Text dimColor>: quit</Text>
+        </Box>
+      )}
     </Box>
   )
 }
