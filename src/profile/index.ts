@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import * as os from 'os'
 import * as path from 'path'
 import type { WizardConfig } from '../types/config.js'
@@ -17,18 +17,24 @@ function atomicWrite(filePath: string, content: string): void {
   mkdirSync(path.dirname(filePath), { recursive: true })
   writeFileSync(tmp, content, 'utf-8')
   renameSync(tmp, filePath)
+  chmodSync(filePath, 0o600)
 }
 
 export function loadProfiles(profilesPath = DEFAULT_PROFILES_PATH): ProfileStore {
   if (!existsSync(profilesPath)) return emptyStore()
   try {
     const raw = readFileSync(profilesPath, 'utf-8')
-    const parsed = JSON.parse(raw) as ProfileStore
-    if (typeof parsed !== 'object' || parsed === null || parsed.version !== 1) {
+    const parsed: unknown = JSON.parse(raw)
+    if (
+      typeof parsed !== 'object' ||
+      parsed === null ||
+      !('version' in parsed) ||
+      (parsed as Record<string, unknown>)['version'] !== 1
+    ) {
       console.warn('[hephaestus] profiles.json has unexpected format — starting fresh')
       return emptyStore()
     }
-    return parsed
+    return parsed as ProfileStore
   } catch {
     console.warn('[hephaestus] Could not read profiles.json — starting fresh')
     return emptyStore()
