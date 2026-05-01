@@ -1,4 +1,5 @@
 import type { Recipe, Category } from './types.js'
+import { validateRecipe } from './types.js'
 
 // Infrastructure
 import { dockge } from './infra/dockge.js'
@@ -98,6 +99,20 @@ export const allRecipes: Recipe[] = [
   // Productivity
   nextcloud, vaultwarden, paperless, mealie, immich,
 ]
+
+// Validate every recipe at startup — fail fast with a clear error rather than
+// a confusing crash at scaffold time.
+for (const recipe of allRecipes) {
+  try {
+    validateRecipe(recipe)
+  } catch (err) {
+    throw new Error(
+      `Recipe "${recipe.id}" failed validation — this is a bug in Hephaestus.\n` +
+      `  ${err instanceof Error ? err.message : String(err)}\n` +
+      `  Fix the recipe at src/recipes/ and restart.`,
+    )
+  }
+}
 
 export const recipeMap: Map<string, Recipe> = new Map(
   allRecipes.map(r => [r.id, r]),
