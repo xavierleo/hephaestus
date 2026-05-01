@@ -4,6 +4,9 @@ dist/
 # Dependencies
 node_modules/
 
+# Local worktrees
+.worktrees/
+
 # Environment files
 .env
 .env.*
