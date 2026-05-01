@@ -2,7 +2,7 @@ import { Command } from 'commander'
 import { render } from 'ink'
 import React from 'react'
 import { App } from './tui/App.js'
-import type { AppFlags } from './types/config.js'
+import type { AppFlags, WizardConfig } from './types/config.js'
 import { allRecipes } from './recipes/registry.js'
 
 const program = new Command()
@@ -108,18 +108,16 @@ profileCmd
       process.exit(1)
     }
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
-    rl.question(`Delete profile "${name}"? This cannot be undone. [y/N] `, answer => {
-      rl.close()
-      if (answer.toLowerCase() !== 'y') {
-        console.log('Aborted.')
-        return
-      }
-      void (async () => {
-        const { deleteProfile: del } = await import('./profile/index.js')
-        del(name)
-        console.log(`✓ Deleted "${name}"`)
-      })()
-    })
+    const answer = await new Promise<string>(resolve =>
+      rl.question(`Delete profile "${name}"? This cannot be undone. [y/N] `, resolve)
+    )
+    rl.close()
+    if (answer.toLowerCase() !== 'y') {
+      console.log('Aborted.')
+      return
+    }
+    deleteProfile(name)
+    console.log(`✓ Deleted "${name}"`)
   })
 
 profileCmd
@@ -168,7 +166,7 @@ profileCmd
 
     const doImport = async () => {
       const { saveProfile: save } = await import('./profile/index.js')
-      save(p.name, p.config as never, p.defaultServices, p.description ?? '')
+      save(p.name, p.config as Partial<WizardConfig>, p.defaultServices, p.description ?? '')
       console.log(`✓ Imported profile "${p.name}"`)
     }
 
@@ -178,7 +176,10 @@ profileCmd
       rl.question(`Profile "${p.name}" already exists. Overwrite? [y/N] `, answer => {
         rl.close()
         if (answer.toLowerCase() !== 'y') { console.log('Aborted.'); return }
-        void doImport()
+        doImport().catch(err => {
+          console.error('Import failed:', err instanceof Error ? err.message : String(err))
+          process.exit(1)
+        })
       })
     } else {
       await doImport()
