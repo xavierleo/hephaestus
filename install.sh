@@ -48,16 +48,22 @@ if ! check_node; then
   fnm use lts-latest
   fnm default lts-latest
   eval "$(fnm env)"
-  NODE_PATH="$(command -v node)"
+  # readlink -f resolves fnm's multishell symlink to the real installed binary
+  NODE_PATH="$(readlink -f "$(command -v node)")"
 fi
 
 # Fall back for pre-existing >=24 installs (fnm branch was skipped)
 if [[ -z "$NODE_PATH" ]]; then
-  NODE_PATH="$(command -v node)"
+  NODE_PATH="$(readlink -f "$(command -v node)")"
+fi
+
+if [[ -z "$NODE_PATH" ]] || [[ ! -x "$NODE_PATH" ]]; then
+  red "Could not locate the node binary. Please check your Node.js installation."
+  exit 1
 fi
 
 NODE_VER="$(node --version)"
-green "Node.js ${NODE_VER} ready"
+green "Node.js ${NODE_VER} ready (${NODE_PATH})"
 
 # ── Fetch latest release from GitHub ──────────────────────────────────────────
 if [[ -n "${HEPHAESTUS_VERSION:-}" ]]; then
