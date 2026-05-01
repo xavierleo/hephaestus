@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx vitest *)"
+      "Bash(npx vitest *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(chmod +x /Users/xavier/Projects/Hephaestus/Code/hephaestus/install.sh)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(npm test *)"
     ]
   }
 }

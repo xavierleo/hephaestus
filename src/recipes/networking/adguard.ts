@@ -5,7 +5,7 @@ export const adguard: Recipe = {
   name: 'AdGuard Home',
   description: 'DNS filtering and ad blocking (alternative to Pi-hole)',
   category: 'networking',
-  port: 3000,
+  port: 8053,
   tags: [],
 
   envVars: [
@@ -36,5 +36,10 @@ export const adguard: Recipe = {
 
   seedConfigs: [],
   dependsOn: [],
-  postInstall: [],
+  postInstall: [
+    {
+      title: 'Complete the setup wizard',
+      description: 'Open http://HOST_IP:3000 — the wizard is only available on port 3000 during first run. After setup, AdGuard is served on port 8053.',
+    },
+  ],
 }

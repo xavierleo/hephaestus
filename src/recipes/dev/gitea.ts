@@ -5,7 +5,7 @@ export const gitea: Recipe = {
   name: 'Gitea',
   description: 'Self-hosted Git service',
   category: 'dev',
-  port: 3000,
+  port: 3100,
   tags: [],
 
   envVars: [

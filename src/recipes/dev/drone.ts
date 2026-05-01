@@ -5,7 +5,7 @@ export const drone: Recipe = {
   name: 'Drone CI',
   description: 'Container-native CI/CD',
   category: 'dev',
-  port: 80,
+  port: 3200,
   tags: [],
 
   envVars: [

@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink'
 import type { WizardConfig, AppFlags } from '../../types/config.js'
 import type { PreflightResult } from '../../system/checks.js'
 import { recipeMap } from '../../recipes/registry.js'
+import { findPortConflicts, findMutexViolations, findDepWarnings } from '../utils/review-checks.js'
 
 interface Props {
   config: WizardConfig
@@ -13,20 +14,6 @@ interface Props {
 }
 
 const DIVIDER = '─'.repeat(75)
-
-// Mutual exclusivity groups — selecting two from the same group is an error
-const MUTEX_GROUPS: Record<string, string[]> = {
-  MEDIA_SERVER:    ['jellyfin', 'plex', 'emby'],
-  REQUEST_MANAGER: ['seerr', 'jellyseerr'],
-  REVERSE_PROXY:   ['npm', 'traefik', 'caddy'],
-  STACK_MANAGER:   ['dockge', 'portainer'],
-  USENET_CLIENT:   ['sabnzbd', 'nzbget'],
-  TORRENT_CLIENT:  ['qbittorrent', 'transmission', 'deluge', 'rutorrent'],
-  REENCODER:       ['fileflows', 'tdarr', 'unmanic'],
-  DNS_BLOCKER:     ['pihole', 'adguard'],
-  GIT_SERVER:      ['gitea', 'forgejo', 'gitlab'],
-  PHOTO_MANAGER:   ['immich', 'photoprism', 'pigallery2'],
-}
 
 export function Review({ config, preflight, flags, onNext, onBack }: Props) {
   useInput((_input, key) => {
@@ -44,45 +31,9 @@ export function Review({ config, preflight, flags, onNext, onBack }: Props) {
   const needsNpm = config.selectedServices.includes('npm')
   const needsRootlessPorts = config.dockerRootless && needsNpm
 
-  // Detect port conflicts between selected services
-  const portOwners = new Map<number, string>()
-  const portConflicts: Array<{ port: number; a: string; b: string }> = []
-  for (const recipe of selectedRecipes) {
-    if (!recipe || recipe.port === 0) continue
-    const existing = portOwners.get(recipe.port)
-    if (existing) {
-      portConflicts.push({ port: recipe.port, a: existing, b: recipe.id })
-    } else {
-      portOwners.set(recipe.port, recipe.id)
-    }
-  }
-
-  // Detect missing dependsOn — warn when a wired service isn't selected
-  const depWarnings: string[] = []
-  for (const recipe of selectedRecipes) {
-    if (!recipe) continue
-    for (const dep of recipe.dependsOn) {
-      if (!config.selectedServices.includes(dep)) {
-        const depRecipe = recipeMap.get(dep)
-        const depName = depRecipe?.name ?? dep
-        depWarnings.push(
-          `${recipe.name} is pre-wired for ${depName} but ${depName} isn't selected — ` +
-          `download client / indexer will need manual setup after launch`,
-        )
-      }
-    }
-  }
-
-  // Detect mutual exclusivity violations
-  const mutexViolations: string[] = []
-  for (const [groupId, members] of Object.entries(MUTEX_GROUPS)) {
-    const selected = members.filter(m => config.selectedServices.includes(m))
-    if (selected.length > 1) {
-      mutexViolations.push(
-        `${groupId}: ${selected.join(' + ')} are mutually exclusive — pick one`,
-      )
-    }
-  }
+  const portConflicts = findPortConflicts(config.selectedServices, recipeMap)
+  const depWarnings = findDepWarnings(config.selectedServices, recipeMap)
+  const mutexViolations = findMutexViolations(config.selectedServices)
 
   const hasBlockers = portConflicts.length > 0 || mutexViolations.length > 0
 

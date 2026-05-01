@@ -5,7 +5,7 @@ export const pihole: Recipe = {
   name: 'Pi-hole',
   description: 'DNS sinkhole + ad blocking',
   category: 'networking',
-  port: 80,
+  port: 8053,
   tags: ['network-host'],
 
   envVars: [

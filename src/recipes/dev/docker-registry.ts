@@ -5,7 +5,7 @@ export const dockerRegistry: Recipe = {
   name: 'Docker Registry',
   description: 'Private container image registry',
   category: 'dev',
-  port: 5000,
+  port: 5050,
   tags: [],
 
   envVars: [

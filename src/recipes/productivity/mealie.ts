@@ -5,7 +5,7 @@ export const mealie: Recipe = {
   name: 'Mealie',
   description: 'Recipe manager and meal planner',
   category: 'productivity',
-  port: 9000,
+  port: 9500,
   tags: [],
 
   envVars: [
