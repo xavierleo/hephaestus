@@ -48,10 +48,10 @@ if ! check_node; then
   fnm use lts-latest
   fnm default lts-latest
   eval "$(fnm env)"
-  NODE_PATH="$(fnm exec --using=lts-latest which node)"
+  NODE_PATH="$(command -v node)"
 fi
 
-# Fall back to whatever node is in PATH (pre-existing >=24 install)
+# Fall back for pre-existing >=24 installs (fnm branch was skipped)
 if [[ -z "$NODE_PATH" ]]; then
   NODE_PATH="$(command -v node)"
 fi
