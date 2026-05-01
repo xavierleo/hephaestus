@@ -104,15 +104,16 @@ describe('loadProfiles', () => {
   it('returns empty structure and warns when file contains corrupted JSON', () => {
     writeFileSync(profilesPath, '{ this is not json }', 'utf-8')
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const store = loadProfiles(profilesPath)
 
-    const store = loadProfiles(profilesPath)
-
-    expect(store.version).toBe(1)
-    expect(store.activeProfile).toBeNull()
-    expect(store.profiles).toEqual({})
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Could not read'))
-
-    warnSpy.mockRestore()
+      expect(store.version).toBe(1)
+      expect(store.activeProfile).toBeNull()
+      expect(store.profiles).toEqual({})
+      expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Could not read'))
+    } finally {
+      warnSpy.mockRestore()
+    }
   })
 })
 
@@ -255,8 +256,10 @@ describe('mergeWithDetected', () => {
     expect(result.selectedServices).toEqual(['jellyfin', 'sonarr', 'radarr'])
   })
 
-  it('nasPass is undefined in the merged result', () => {
+  it('nasPass is undefined in the merged result even if injected into profile config', () => {
     const profile = makeProfile()
+    // Simulate a corrupted or hand-edited profile that somehow has nasPass
+    ;(profile.config as Record<string, unknown>)['nasPass'] = 'injected-secret'
     const detected: Partial<WizardConfig> = { puid: 1001 }
 
     const result = mergeWithDetected(profile, detected)
