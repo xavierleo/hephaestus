@@ -16,7 +16,8 @@ export function renderSetupMd(recipe: Recipe, config: WizardConfig): string {
   if (recipe.seedConfigs.length > 0) {
     lines.push('## Already configured for you')
     for (const seed of recipe.seedConfigs) {
-      lines.push(`- ✓ ${seed.path} pre-seeded`)
+      const pathLabel = typeof seed.path === 'function' ? '(config file)' : seed.path.split('/').pop() ?? seed.path
+      lines.push(`- ✓ ${pathLabel} pre-seeded`)
     }
     lines.push('')
   }

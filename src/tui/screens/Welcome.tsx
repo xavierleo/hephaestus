@@ -36,9 +36,25 @@ export function Welcome({ preflight, onNext }: Props) {
     if (key.return) onNext()
   })
 
-  const dockerLabel = preflight.docker.ok
-    ? `${preflight.docker.version} (Compose V2)`
-    : 'not installed'
+  // Docker label — distinguish between not installed, daemon down, and running
+  let dockerLabel: string
+  let dockerOk: boolean | undefined
+  if (preflight.docker.ok) {
+    const composeNote = preflight.docker.composeOk
+      ? `Compose V2 ${preflight.docker.composeVersion}`
+      : 'Compose V2 MISSING'
+    dockerLabel = `${preflight.docker.version} (${composeNote})`
+    dockerOk = preflight.docker.composeOk
+  } else if (preflight.docker.version.includes('daemon not running')) {
+    dockerLabel = 'installed — daemon not running (start with: sudo systemctl start docker)'
+    dockerOk = false
+  } else if (preflight.docker.version.includes('cannot connect')) {
+    dockerLabel = 'installed — cannot connect (permission error or daemon down)'
+    dockerOk = false
+  } else {
+    dockerLabel = 'not installed'
+    dockerOk = false
+  }
 
   const dockerMode = preflight.docker.rootless ? 'Rootless' : 'Rootful'
 
@@ -46,19 +62,64 @@ export function Welcome({ preflight, onNext }: Props) {
     ? `${preflight.tailscale.version} — ${preflight.tailscale.connected ? 'connected' : 'disconnected'}`
     : 'not installed'
 
-  const gpuLabel = preflight.gpu.detected
-    ? `AMD (${preflight.gpu.cardPath.split('/').pop()}/${preflight.gpu.renderPath.split('/').pop()})`
-    : 'none detected'
+  let gpuLabel: string
+  let gpuOk: boolean | undefined
+  if (preflight.gpu.detected) {
+    gpuLabel = `AMD (${preflight.gpu.cardPath.split('/').pop()}/${preflight.gpu.renderPath.split('/').pop()})`
+    gpuOk = true
+  } else {
+    gpuLabel = 'none detected'
+    gpuOk = undefined
+  }
 
   const portLabel =
     preflight.portConflicts.length === 0
-      ? 'none'
+      ? preflight.portScanAvailable ? 'none' : 'scan unavailable (ss/netstat missing)'
       : preflight.portConflicts.map(c => `:${c.port}`).join(', ')
 
   const stacksLabel =
     preflight.existingStacks.length === 0
       ? 'none'
-      : preflight.existingStacks.join(', ')
+      : `${preflight.existingStacks.length} existing (will merge on re-run)`
+
+  // Collect warnings to show below the table
+  const warnings: string[] = []
+
+  if (preflight.docker.ok && !preflight.docker.composeOk) {
+    warnings.push(
+      'Docker Compose V2 plugin is missing. Install it with:\n' +
+      '  sudo apt-get install docker-compose-plugin',
+    )
+  }
+
+  if (preflight.tzDefaulted) {
+    warnings.push(
+      `Timezone could not be detected — defaulted to UTC. ` +
+      `Update it in the Configuration screen.`,
+    )
+  }
+
+  if (preflight.gpu.detected && !preflight.gpu.userInRenderGroup) {
+    warnings.push(
+      `GPU detected but your user is not in the render group (GID ${preflight.gpu.renderGid}). ` +
+      `Add yourself with:\n` +
+      `  sudo usermod -aG ${preflight.gpu.renderGidName} $USER\n` +
+      `  (then log out and back in)`,
+    )
+  }
+
+  if (preflight.isRoot && !preflight.sudoUser) {
+    warnings.push(
+      'Running as root. Hephaestus works best run as your normal user with sudo only where needed.',
+    )
+  }
+
+  if (!preflight.portScanAvailable) {
+    warnings.push(
+      'Port conflict detection unavailable — neither ss nor netstat found. ' +
+      'Install iproute2: sudo apt-get install iproute2',
+    )
+  }
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -72,24 +133,24 @@ export function Welcome({ preflight, onNext }: Props) {
       <Text dimColor>{DIVIDER}</Text>
 
       <CheckRow label="OS" value={preflight.os.name} ok={preflight.os.ok} />
-      <CheckRow
-        label="Docker"
-        value={dockerLabel}
-        ok={preflight.docker.ok}
-      />
+      <CheckRow label="Docker" value={dockerLabel} ok={dockerOk} />
       <CheckRow label="Docker mode" value={dockerMode} />
       <CheckRow
         label="Tailscale"
         value={tailscaleLabel}
         ok={preflight.tailscale.ok || undefined}
       />
-      <CheckRow
-        label="GPU"
-        value={gpuLabel}
-        ok={preflight.gpu.detected || undefined}
-      />
+      <CheckRow label="GPU" value={gpuLabel} ok={gpuOk} />
       {preflight.gpu.detected && (
-        <CheckRow label="Render GID" value={String(preflight.gpu.renderGid)} />
+        <>
+          <CheckRow label="Render GID" value={String(preflight.gpu.renderGid)} />
+          <CheckRow
+            label="Render group"
+            value={preflight.gpu.userInRenderGroup ? 'user is member' : `not in group — run usermod`}
+            ok={preflight.gpu.userInRenderGroup || undefined}
+            warning={!preflight.gpu.userInRenderGroup}
+          />
+        </>
       )}
       <CheckRow
         label="CIFS utils"
@@ -99,10 +160,32 @@ export function Welcome({ preflight, onNext }: Props) {
       <CheckRow
         label="Port conflicts"
         value={portLabel}
-        ok={preflight.portConflicts.length === 0 ? true : undefined}
-        warning={preflight.portConflicts.length > 0}
+        ok={preflight.portConflicts.length === 0 && preflight.portScanAvailable}
+        warning={!preflight.portScanAvailable || preflight.portConflicts.length > 0}
       />
+      <CheckRow
+        label="Timezone"
+        value={preflight.tz}
+        ok={!preflight.tzDefaulted}
+        warning={preflight.tzDefaulted}
+      />
+      <CheckRow label="PUID / PGID" value={`${preflight.puid} / ${preflight.pgid}`} />
+      {preflight.sudoUser && (
+        <CheckRow label="sudo user" value={preflight.sudoUser} />
+      )}
       <CheckRow label="Existing stacks" value={stacksLabel} />
+
+      {warnings.length > 0 && (
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>{DIVIDER}</Text>
+          {warnings.map((w, i) => (
+            <Box key={i} marginBottom={i < warnings.length - 1 ? 1 : 0}>
+              <Text color="yellow">⚠ </Text>
+              <Text dimColor>{w}</Text>
+            </Box>
+          ))}
+        </Box>
+      )}
 
       <Box marginTop={1}>
         <Text dimColor>Press </Text>
