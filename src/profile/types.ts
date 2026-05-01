@@ -15,9 +15,9 @@ export interface ProfileConfig {
   // nasPass is NEVER stored
   dockerRootless: boolean
   hasGpu: boolean
-  gpuCard: string
-  gpuRender: string
-  renderGid: number
+  gpuCard?: string
+  gpuRender?: string
+  renderGid?: number
 }
 
 export interface Profile {
