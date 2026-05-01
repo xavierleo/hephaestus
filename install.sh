@@ -20,50 +20,23 @@ fi
 
 bold "Installing Hephaestus..."
 
-# ── Node.js 24+ ────────────────────────────────────────────────────────────────
-check_node() {
-  if command -v node &>/dev/null; then
-    NODE_VER="$(node --version | sed 's/v//')"
-    MAJOR="${NODE_VER%%.*}"
-    if [[ "$MAJOR" -ge 24 ]]; then
-      return 0
-    fi
-    yellow "Node.js ${NODE_VER} found — Hephaestus requires >=24. Installing via fnm..."
+# ── Node.js LTS (via NodeSource) ───────────────────────────────────────────────
+if command -v node &>/dev/null; then
+  NODE_MAJOR="$(node --version | cut -d. -f1 | tr -d 'v')"
+  if [ "$NODE_MAJOR" -ge 20 ]; then
+    green "Node.js $(node --version) already installed"
   else
-    yellow "Node.js not found. Installing via fnm..."
+    yellow "Node.js version too old, upgrading..."
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+    sudo apt-get install -y nodejs
   fi
-  return 1
-}
-
-NODE_PATH=""
-
-if ! check_node; then
-  # Install fnm (fast node manager) and use it to install Node 24 LTS
-  if ! command -v fnm &>/dev/null; then
-    curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell
-    export PATH="${HOME}/.local/share/fnm:${PATH}"
-    eval "$(fnm env --use-on-cd)"
-  fi
-  fnm install --lts
-  fnm use lts-latest
-  fnm default lts-latest
-  eval "$(fnm env)"
-  # readlink -f resolves fnm's multishell symlink to the real installed binary
-  NODE_PATH="$(readlink -f "$(command -v node)")"
+else
+  bold "Installing Node.js LTS..."
+  curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+  sudo apt-get install -y nodejs
 fi
 
-# Fall back for pre-existing >=24 installs (fnm branch was skipped)
-if [[ -z "$NODE_PATH" ]]; then
-  NODE_PATH="$(readlink -f "$(command -v node)")"
-fi
-
-if [[ -z "$NODE_PATH" ]] || [[ ! -x "$NODE_PATH" ]]; then
-  red "Could not locate the node binary. Please check your Node.js installation."
-  exit 1
-fi
-
-NODE_VER="$(node --version)"
-green "Node.js ${NODE_VER} ready (${NODE_PATH})"
+green "Node.js $(node --version) ready"
 
 # ── Fetch latest release from GitHub ──────────────────────────────────────────
 if [[ -n "${HEPHAESTUS_VERSION:-}" ]]; then
@@ -117,7 +90,7 @@ tar -xzf "${TMP_DIR}/${TARBALL}" -C "$INSTALL_DIR"
 bold "Writing ${BIN_PATH}..."
 WRAPPER="$(cat <<WRAPPER_EOF
 #!/usr/bin/env bash
-exec "$NODE_PATH" "${INSTALL_DIR}/dist/index.js" "\$@"
+exec /usr/bin/node "${INSTALL_DIR}/dist/index.js" "\$@"
 WRAPPER_EOF
 )"
 
