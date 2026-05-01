@@ -106,3 +106,4 @@ green "Hephaestus ${TAG} installed!"
 echo ""
 echo "  Run:  hephaestus"
 echo ""
+read -rp "  Press Enter to continue..." _ </dev/tty
