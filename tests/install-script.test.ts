@@ -9,9 +9,8 @@ describe('Node.js runtime support', () => {
     const installScript = readFileSync('install.sh', 'utf-8')
 
     expect(packageJson.engines?.node).toBe('>=24.0.0')
-    expect(installScript).toContain('Node.js 24+')
-    expect(installScript).toContain('requires >=24')
-    expect(installScript).toContain('fnm install --lts')
-    expect(installScript).toContain('fnm use lts-latest')
+    expect(installScript).toContain('nodesource.com/setup_lts.x')
+    expect(installScript).toContain('apt-get install -y nodejs')
+    expect(installScript).toContain('/usr/bin/node')
   })
 })
