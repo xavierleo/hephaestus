@@ -42,8 +42,9 @@ if ! check_node; then
     export PATH="${HOME}/.local/share/fnm:${PATH}"
     eval "$(fnm env --use-on-cd)"
   fi
-  fnm install 24 --lts
-  fnm use 24
+  fnm install --lts
+  fnm use lts-latest
+  fnm default lts-latest
   eval "$(fnm env)"
 fi
 
