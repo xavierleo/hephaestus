@@ -12,6 +12,7 @@ import { ServiceSelector } from './screens/ServiceSelector.js'
 import { Review } from './screens/Review.js'
 import { Progress } from './screens/Progress.js'
 import { getActiveProfile, getProfile, mergeWithDetected, saveProfile, setActiveProfile } from '../profile/index.js'
+import { allRecipes } from '../recipes/registry.js'
 import type { Profile } from '../profile/types.js'
 import { SaveProfile } from './screens/SaveProfile.js'
 import { ProfileManager } from './screens/ProfileManager.js'
@@ -85,6 +86,18 @@ export function App({ flags }: AppProps) {
   const goBack = () => {
     setScreen(prev => prevScreen(prev))
   }
+
+  const currentRecipeVersions = (): Record<string, string> => {
+    const map: Record<string, string> = {}
+    for (const r of allRecipes) {
+      map[r.id] = r.schemaVersion ?? '1.0.0'
+    }
+    return map
+  }
+
+  const profileRecipeVersions = loadedProfileName
+    ? (getProfile(loadedProfileName)?.recipeVersions ?? null)
+    : null
 
   const handleLoadProfile = () => {
     if (!activeProfile || !preflight) return
@@ -170,6 +183,7 @@ export function App({ flags }: AppProps) {
         config={config as WizardConfig}
         preflight={preflight}
         flags={flags}
+        profileRecipeVersions={profileRecipeVersions}
         onNext={() => advance()}
         onBack={goBack}
       />
@@ -183,7 +197,7 @@ export function App({ flags }: AppProps) {
         flags={flags}
         onDone={() => {
           if (loadedProfileName) {
-            saveProfile(loadedProfileName, config, config.selectedServices ?? [])
+            saveProfile(loadedProfileName, config, config.selectedServices ?? [], '', undefined, currentRecipeVersions())
             setScreen('DONE')
           } else {
             setScreen('SAVE_PROFILE')
@@ -207,7 +221,7 @@ export function App({ flags }: AppProps) {
       <SaveProfile
         config={config as WizardConfig}
         onSave={(name, description) => {
-          saveProfile(name, config, config.selectedServices ?? [], description)
+          saveProfile(name, config, config.selectedServices ?? [], description, undefined, currentRecipeVersions())
           setActiveProfile(name)
           setScreen('DONE')
         }}

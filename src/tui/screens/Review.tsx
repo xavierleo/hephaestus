@@ -9,13 +9,14 @@ interface Props {
   config: WizardConfig
   preflight: PreflightResult
   flags: AppFlags
+  profileRecipeVersions?: Record<string, string> | null
   onNext: () => void
   onBack: () => void
 }
 
 const DIVIDER = '─'.repeat(75)
 
-export function Review({ config, preflight, flags, onNext, onBack }: Props) {
+export function Review({ config, preflight, flags, profileRecipeVersions, onNext, onBack }: Props) {
   useInput((_input, key) => {
     if (key.return) onNext()
     if (key.escape) onBack()
@@ -36,6 +37,17 @@ export function Review({ config, preflight, flags, onNext, onBack }: Props) {
   const mutexViolations = findMutexViolations(config.selectedServices)
 
   const hasBlockers = portConflicts.length > 0 || mutexViolations.length > 0
+
+  const updatedRecipes = profileRecipeVersions
+    ? config.selectedServices
+        .map(id => recipeMap.get(id))
+        .filter((r): r is NonNullable<typeof r> => r !== undefined)
+        .filter(r => {
+          const stored = profileRecipeVersions[r.id]
+          const current = r.schemaVersion ?? '1.0.0'
+          return stored !== undefined && stored !== current
+        })
+    : []
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -74,6 +86,24 @@ export function Review({ config, preflight, flags, onNext, onBack }: Props) {
               <Text dimColor>{msg}</Text>
             </Box>
           ))}
+        </Box>
+      )}
+
+      {updatedRecipes.length > 0 && (
+        <Box marginTop={1} flexDirection="column">
+          <Text dimColor>{DIVIDER}</Text>
+          <Text color="yellow" bold>
+            {'⚠  '}{updatedRecipes.length} recipe{updatedRecipes.length !== 1 ? 's have' : ' has'} been updated since your last run
+          </Text>
+          {updatedRecipes.map(r => (
+            <Box key={r.id}>
+              <Text dimColor>{'     '}{r.id.padEnd(20)}</Text>
+              <Text dimColor>— schema updated to v{r.schemaVersion ?? '1.0.0'}</Text>
+            </Box>
+          ))}
+          <Box marginTop={1}>
+            <Text dimColor>Updated stacks will be regenerated. Existing .env values are preserved.</Text>
+          </Box>
         </Box>
       )}
 

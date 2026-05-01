@@ -104,6 +104,7 @@ export interface Recipe {
   seedConfigs: SeedConfig[]
   dependsOn: string[]
   postInstall: PostInstallStep[]
+  schemaVersion?: string  // bump this when envVars or composeService structure changes
 }
 
 // Zod schema for runtime validation of recipe shape
@@ -133,6 +134,7 @@ export const RecipeSchema = z.object({
   seedConfigs: z.array(z.object({ path: z.union([z.string(), z.function()]), generate: z.function() })),
   dependsOn: z.array(z.string()),
   postInstall: z.array(z.object({ title: z.string(), description: z.string(), url: z.function().optional() })),
+  schemaVersion: z.string().optional().default('1.0.0'),
 })
 
 export function validateRecipe(recipe: unknown): Recipe {
