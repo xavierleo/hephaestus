@@ -14,6 +14,10 @@ export interface ScaffoldOptions {
   onProgress?: (label: string, status: 'running' | 'done' | 'error', detail?: string) => void
 }
 
+export interface ScaffoldResult {
+  newEnvVars: Map<string, string[]>  // recipeId → list of newly-added env var keys
+}
+
 // Write to .tmp then rename so a failed run never leaves partial files
 function atomicWrite(filePath: string, content: string): void {
   const tmp = `${filePath}.tmp`
@@ -54,10 +58,24 @@ function mergeEnvContent(newContent: string, existing: Map<string, string>): str
   }).join('\n')
 }
 
-export async function runScaffold(config: WizardConfig, options: ScaffoldOptions): Promise<void> {
+function findNewEnvKeys(newContent: string, existing: Map<string, string>): string[] {
+  const added: string[] = []
+  for (const line of newContent.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq < 0) continue
+    const key = trimmed.slice(0, eq)
+    if (!existing.has(key)) added.push(key)
+  }
+  return added
+}
+
+export async function runScaffold(config: WizardConfig, options: ScaffoldOptions): Promise<ScaffoldResult> {
   const { dryRun, onProgress } = options
   const report = (label: string, status: 'running' | 'done' | 'error', detail?: string) =>
     onProgress?.(label, status, detail)
+  const newEnvVars = new Map<string, string[]>()
 
   const selectedRecipes = config.selectedServices
     .map(id => recipeMap.get(id))
@@ -143,10 +161,11 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
       const envContent = renderEnv([recipe], config)
       if (!dryRun) {
         const envPath = join(stackDir, '.env')
-        const existing = parseEnvFile(envPath)
-        const finalEnv = existing.size > 0 ? mergeEnvContent(envContent, existing) : envContent
+        const existingEnv = parseEnvFile(envPath)
+        const addedKeys = existingEnv.size > 0 ? findNewEnvKeys(envContent, existingEnv) : []
+        const finalEnv = existingEnv.size > 0 ? mergeEnvContent(envContent, existingEnv) : envContent
+        if (addedKeys.length > 0) newEnvVars.set(recipe.id, addedKeys)
         atomicWrite(envPath, finalEnv)
-        // Secrets live here — never world-readable
         chmodSync(envPath, 0o600)
         atomicWrite(join(stackDir, '.gitignore'), '.env\n')
       }
@@ -176,6 +195,8 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
       report(recipe.id, 'error', err instanceof Error ? err.message : String(err))
     }
   }
+
+  return { newEnvVars }
 }
 
 // Try to read the API key already embedded in the first seed config on disk,

@@ -21,6 +21,7 @@ export function Progress({ config, flags, onDone }: Props) {
   const [done, setDone] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState<string | null>(null)
+  const [newEnvVars, setNewEnvVars] = useState<Map<string, string[]>>(new Map())
 
   useInput((_input, key) => {
     if (done && key.return) onDone()
@@ -45,8 +46,9 @@ export function Progress({ config, flags, onDone }: Props) {
     }
 
     runScaffold(config, { dryRun: flags.dryRun, onProgress })
-      .then(() => {
+      .then(result => {
         clearInterval(timer)
+        setNewEnvVars(result.newEnvVars)
         setDone(true)
       })
       .catch(err => {
@@ -85,6 +87,18 @@ export function Progress({ config, flags, onDone }: Props) {
           </Box>
         ))}
       </Box>
+
+      {done && !error && newEnvVars.size > 0 && (
+        <Box marginTop={1} flexDirection="column">
+          <Text color="yellow" bold>New env vars appended to existing .env files:</Text>
+          {[...newEnvVars.entries()].map(([recipeId, keys]) => (
+            <Box key={recipeId}>
+              <Text dimColor>  {recipeId.padEnd(20)}</Text>
+              <Text dimColor>{keys.join(', ')}</Text>
+            </Box>
+          ))}
+        </Box>
+      )}
 
       {done && !error && (
         <Box marginTop={1} flexDirection="column">
