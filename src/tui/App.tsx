@@ -11,6 +11,10 @@ import { Config } from './screens/Config.js'
 import { ServiceSelector } from './screens/ServiceSelector.js'
 import { Review } from './screens/Review.js'
 import { Progress } from './screens/Progress.js'
+import { getActiveProfile, getProfile, mergeWithDetected, saveProfile, setActiveProfile } from '../profile/index.js'
+import type { Profile } from '../profile/types.js'
+import { SaveProfile } from './screens/SaveProfile.js'
+import { ProfileManager } from './screens/ProfileManager.js'
 
 interface AppProps {
   flags: AppFlags
@@ -20,6 +24,8 @@ export function App({ flags }: AppProps) {
   const { exit } = useApp()
   const [screen, setScreen] = useState<WizardScreen>('LOADING')
   const [preflight, setPreflight] = useState<PreflightResult | null>(null)
+  const [activeProfile, setActiveProfileState] = useState<Profile | null>(null)
+  const [loadedProfileName, setLoadedProfileName] = useState<string | null>(null)
   const [config, setConfig] = useState<Partial<WizardConfig>>({
     selectedServices: [],
     baseDir: `/home/${process.env['USER'] ?? 'user'}/docker-services`,
@@ -32,10 +38,12 @@ export function App({ flags }: AppProps) {
 
   useEffect(() => {
     const stacksDir = config.stacksDir ?? '/opt/stacks'
+    setActiveProfileState(getActiveProfile())
+
     runPreflightChecks(stacksDir).then(result => {
       setPreflight(result)
-      setConfig(prev => ({
-        ...prev,
+
+      const detectedValues: Partial<WizardConfig> = {
         hostIp: result.hostIp,
         puid: result.puid,
         pgid: result.pgid,
@@ -46,13 +54,22 @@ export function App({ flags }: AppProps) {
         gpuCard: result.gpu.cardPath,
         gpuRender: result.gpu.renderPath,
         renderGid: result.gpu.renderGid,
-      }))
-
-      if (flags.stacksOnly) {
-        setScreen('SERVICE_SELECTOR')
-      } else {
-        setScreen('WELCOME')
       }
+
+      if (flags.profileName) {
+        const targetProfile = getProfile(flags.profileName)
+        if (targetProfile) {
+          const merged = mergeWithDetected(targetProfile, detectedValues)
+          setConfig(merged)
+          setLoadedProfileName(targetProfile.name)
+          setScreen(flags.stacksOnly ? 'PROGRESS' : 'SERVICE_SELECTOR')
+          return
+        }
+        console.warn(`[hephaestus] Profile "${flags.profileName}" not found — starting wizard`)
+      }
+
+      setConfig(prev => ({ ...prev, ...detectedValues }))
+      setScreen(flags.stacksOnly ? 'SERVICE_SELECTOR' : 'WELCOME')
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -67,6 +84,26 @@ export function App({ flags }: AppProps) {
 
   const goBack = () => {
     setScreen(prev => prevScreen(prev))
+  }
+
+  const handleLoadProfile = () => {
+    if (!activeProfile || !preflight) return
+    const detectedValues: Partial<WizardConfig> = {
+      hostIp: preflight.hostIp,
+      puid: preflight.puid,
+      pgid: preflight.pgid,
+      tz: preflight.tz,
+      dockerRootless: preflight.docker.rootless,
+      dockerSocketPath: deriveDockerSocketPath(preflight.docker.rootless, preflight.puid),
+      hasGpu: preflight.gpu.detected,
+      gpuCard: preflight.gpu.cardPath,
+      gpuRender: preflight.gpu.renderPath,
+      renderGid: preflight.gpu.renderGid,
+    }
+    const merged = mergeWithDetected(activeProfile, detectedValues)
+    setConfig(merged)
+    setLoadedProfileName(activeProfile.name)
+    setScreen('SERVICE_SELECTOR')
   }
 
   // Global quit — disabled during scaffolding to avoid partial writes
@@ -89,7 +126,10 @@ export function App({ flags }: AppProps) {
     return (
       <Welcome
         preflight={preflight}
+        activeProfile={activeProfile}
         onNext={() => advance()}
+        onLoadProfile={handleLoadProfile}
+        onManageProfiles={() => setScreen('PROFILE_MANAGER')}
       />
     )
   }
@@ -141,7 +181,14 @@ export function App({ flags }: AppProps) {
       <Progress
         config={config as WizardConfig}
         flags={flags}
-        onDone={() => setScreen('DONE')}
+        onDone={() => {
+          if (loadedProfileName) {
+            saveProfile(loadedProfileName, config, config.selectedServices ?? [])
+            setScreen('DONE')
+          } else {
+            setScreen('SAVE_PROFILE')
+          }
+        }}
       />
     )
   }
@@ -152,6 +199,28 @@ export function App({ flags }: AppProps) {
         <Text color="green" bold>✓ Scaffold complete!</Text>
         <Text dimColor>Your stacks are in {config.stacksDir}. Run: docker compose up -d</Text>
       </Box>
+    )
+  }
+
+  if (screen === 'SAVE_PROFILE') {
+    return (
+      <SaveProfile
+        config={config as WizardConfig}
+        onSave={(name, description) => {
+          saveProfile(name, config, config.selectedServices ?? [], description)
+          setActiveProfile(name)
+          setScreen('DONE')
+        }}
+        onSkip={() => setScreen('DONE')}
+      />
+    )
+  }
+
+  if (screen === 'PROFILE_MANAGER') {
+    return (
+      <ProfileManager
+        onDone={() => setScreen('WELCOME')}
+      />
     )
   }
 
