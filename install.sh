@@ -35,6 +35,8 @@ check_node() {
   return 1
 }
 
+NODE_PATH=""
+
 if ! check_node; then
   # Install fnm (fast node manager) and use it to install Node 24 LTS
   if ! command -v fnm &>/dev/null; then
@@ -46,6 +48,12 @@ if ! check_node; then
   fnm use lts-latest
   fnm default lts-latest
   eval "$(fnm env)"
+  NODE_PATH="$(fnm exec --using=lts-latest which node)"
+fi
+
+# Fall back to whatever node is in PATH (pre-existing >=24 install)
+if [[ -z "$NODE_PATH" ]]; then
+  NODE_PATH="$(command -v node)"
 fi
 
 NODE_VER="$(node --version)"
@@ -103,7 +111,7 @@ tar -xzf "${TMP_DIR}/${TARBALL}" -C "$INSTALL_DIR"
 bold "Writing ${BIN_PATH}..."
 WRAPPER="$(cat <<WRAPPER_EOF
 #!/usr/bin/env bash
-exec node "${INSTALL_DIR}/dist/index.js" "\$@"
+exec "$NODE_PATH" "${INSTALL_DIR}/dist/index.js" "\$@"
 WRAPPER_EOF
 )"
 
