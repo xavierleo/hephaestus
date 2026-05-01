@@ -95,3 +95,29 @@ describe('Recipe registry — mutex groups', () => {
     }
   })
 })
+
+describe('Recipe registry — Frigate', () => {
+  it('registers Frigate as a security camera NVR recipe', () => {
+    const frigate = allRecipes.find(r => r.id === 'frigate')
+
+    expect(frigate).toBeDefined()
+    expect(frigate).toMatchObject({
+      name: 'Frigate',
+      category: 'security',
+      port: 8971,
+      composeService: {
+        image: 'ghcr.io/blakeblackshear/frigate:stable',
+        container_name: 'frigate',
+      },
+    })
+    expect(frigate?.tags).toContain('needs-gpu')
+    expect(frigate?.tags).toContain('privileged')
+    expect(frigate?.envVars.some(env => env.key === 'FRIGATE_RTSP_PASSWORD' && env.secret)).toBe(true)
+    expect(frigate?.composeService.ports).toEqual(expect.arrayContaining([
+      '${FRIGATE_PORT}:8971',
+      '${FRIGATE_RTSP_PORT}:8554',
+      '${FRIGATE_WEBRTC_PORT}:8555/tcp',
+      '${FRIGATE_WEBRTC_PORT}:8555/udp',
+    ]))
+  })
+})

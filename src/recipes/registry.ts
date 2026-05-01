@@ -50,6 +50,9 @@ import { dashy } from './dashboard/dashy.js'
 import { uptimekuma } from './monitoring/uptime-kuma.js'
 import { netdata } from './monitoring/netdata.js'
 
+// Security
+import { frigate } from './security/frigate.js'
+
 // Home Automation
 import { homeassistant } from './homeauto/homeassistant.js'
 import { nodered } from './homeauto/nodered.js'
@@ -90,6 +93,8 @@ export const allRecipes: Recipe[] = [
   homarr, homepage, dashy,
   // Monitoring
   uptimekuma, netdata,
+  // Security
+  frigate,
   // Home Automation
   homeassistant, nodered, mosquitto,
   // Networking

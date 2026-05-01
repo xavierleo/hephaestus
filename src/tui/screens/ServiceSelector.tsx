@@ -22,6 +22,7 @@ const CATEGORY_ORDER: Category[] = [
   'books',
   'dashboard',
   'monitoring',
+  'security',
   'homeauto',
   'networking',
   'dev',

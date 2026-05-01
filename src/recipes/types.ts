@@ -10,6 +10,7 @@ export type Category =
   | 'books'
   | 'dashboard'
   | 'monitoring'
+  | 'security'
   | 'homeauto'
   | 'networking'
   | 'dev'
@@ -24,6 +25,7 @@ export const CATEGORY_LABELS: Record<Category, string> = {
   books: 'Books',
   dashboard: 'Dashboard',
   monitoring: 'Monitoring',
+  security: 'Security',
   homeauto: 'Home Auto',
   networking: 'Networking',
   dev: 'Dev',
@@ -126,7 +128,7 @@ export const RecipeSchema = z.object({
   id: z.string().min(1).regex(/^[a-z0-9-]+$/, 'Recipe ID must be lowercase alphanumeric with hyphens'),
   name: z.string().min(1),
   description: z.string().min(1),
-  category: z.enum(['infra', 'media', 'download', 'arr', 'management', 'books', 'dashboard', 'monitoring', 'homeauto', 'networking', 'dev', 'productivity']),
+  category: z.enum(['infra', 'media', 'download', 'arr', 'management', 'books', 'dashboard', 'monitoring', 'security', 'homeauto', 'networking', 'dev', 'productivity']),
   port: z.number().int().nonnegative(),
   tags: z.array(z.string()),
   envVars: z.array(EnvVarSchema),
