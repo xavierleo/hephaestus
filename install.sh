@@ -20,15 +20,15 @@ fi
 
 bold "Installing Hephaestus..."
 
-# ── Node.js 20+ ────────────────────────────────────────────────────────────────
+# ── Node.js 24+ ────────────────────────────────────────────────────────────────
 check_node() {
   if command -v node &>/dev/null; then
     NODE_VER="$(node --version | sed 's/v//')"
     MAJOR="${NODE_VER%%.*}"
-    if [[ "$MAJOR" -ge 20 ]]; then
+    if [[ "$MAJOR" -ge 24 ]]; then
       return 0
     fi
-    yellow "Node.js ${NODE_VER} found — Hephaestus requires >=20. Installing via fnm..."
+    yellow "Node.js ${NODE_VER} found — Hephaestus requires >=24. Installing via fnm..."
   else
     yellow "Node.js not found. Installing via fnm..."
   fi
@@ -36,14 +36,14 @@ check_node() {
 }
 
 if ! check_node; then
-  # Install fnm (fast node manager) and use it to install Node 20 LTS
+  # Install fnm (fast node manager) and use it to install Node 24 LTS
   if ! command -v fnm &>/dev/null; then
     curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell
     export PATH="${HOME}/.local/share/fnm:${PATH}"
     eval "$(fnm env --use-on-cd)"
   fi
-  fnm install 20 --lts
-  fnm use 20
+  fnm install 24 --lts
+  fnm use 24
   eval "$(fnm env)"
 fi
 
