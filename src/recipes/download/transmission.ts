@@ -63,8 +63,6 @@ export const transmission: Recipe = {
       '${COMPLETE_DIR}:/downloads/complete',
     ],
     ports: ['${TRANSMISSION_PORT}:9091'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

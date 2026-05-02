@@ -71,8 +71,6 @@ export const nextcloud: Recipe = {
     ],
     volumes: ['${NEXTCLOUD_DATA}:/data'],
     ports: ['${NEXTCLOUD_PORT}:443'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

@@ -32,8 +32,6 @@ export const huntarr: Recipe = {
     environment: ['TZ=${TZ}'],
     volumes: ['${HUNTARR_DATA}:/config'],
     ports: ['${HUNTARR_PORT}:9705'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

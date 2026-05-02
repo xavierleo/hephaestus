@@ -61,8 +61,6 @@ export const qbittorrent: Recipe = {
       '${COMPLETE_DIR}:/downloads/complete',
     ],
     ports: ['8388:8388'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

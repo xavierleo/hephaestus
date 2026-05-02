@@ -63,8 +63,6 @@ export const kavita: Recipe = {
       '${COMICS_DIR}:/data:ro',
     ],
     ports: ['${KAVITA_PORT}:5000'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

@@ -50,8 +50,6 @@ export const mealie: Recipe = {
     ],
     volumes: ['${MEALIE_DATA}:/app/data'],
     ports: ['${MEALIE_PORT}:9000'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

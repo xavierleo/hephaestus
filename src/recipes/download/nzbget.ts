@@ -63,8 +63,6 @@ export const nzbget: Recipe = {
       '${COMPLETE_DIR}:/downloads/complete',
     ],
     ports: ['${NZBGET_PORT}:6789'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

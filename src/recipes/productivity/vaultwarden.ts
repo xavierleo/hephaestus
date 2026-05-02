@@ -50,8 +50,6 @@ export const vaultwarden: Recipe = {
     ],
     volumes: ['${VW_DATA}:/data'],
     ports: ['${VW_PORT}:80'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

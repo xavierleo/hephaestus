@@ -36,8 +36,6 @@ export const homarr: Recipe = {
       '${HOMARR_DATA}/icons:/app/public/icons',
     ],
     ports: ['${HOMARR_PORT}:7575'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

@@ -71,8 +71,6 @@ export const lidarr: Recipe = {
       '${COMPLETE_DIR}:/downloads/complete',
     ],
     ports: ['${LIDARR_PORT}:8686'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

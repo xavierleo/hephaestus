@@ -42,8 +42,6 @@ export const komga: Recipe = {
       '${COMICS_DIR}:/comics:ro',
     ],
     ports: ['${KOMGA_PORT}:25600'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

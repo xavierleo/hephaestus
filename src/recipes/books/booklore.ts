@@ -32,8 +32,6 @@ export const booklore: Recipe = {
     environment: ['TZ=${TZ}'],
     volumes: ['${BOOKLORE_DATA}:/data'],
     ports: ['${BOOKLORE_PORT}:6464'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

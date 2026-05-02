@@ -32,8 +32,6 @@ export const dockerRegistry: Recipe = {
     environment: ['REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/data'],
     volumes: ['${REGISTRY_DATA}:/data'],
     ports: ['${REGISTRY_PORT}:5000'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

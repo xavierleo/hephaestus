@@ -55,8 +55,6 @@ export const prowlarr: Recipe = {
     environment: ['PUID=${PUID}', 'PGID=${PGID}', 'TZ=${TZ}'],
     volumes: ['${PROWLARR_DATA}:/config'],
     ports: ['${PROWLARR_PORT}:9696'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [

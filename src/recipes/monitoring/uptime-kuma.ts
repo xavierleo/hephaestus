@@ -32,8 +32,6 @@ export const uptimekuma: Recipe = {
     environment: ['TZ=${TZ}'],
     volumes: ['${KUMA_DATA}:/app/data'],
     ports: ['${KUMA_PORT}:3001'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

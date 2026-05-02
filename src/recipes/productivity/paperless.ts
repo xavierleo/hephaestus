@@ -76,8 +76,6 @@ export const paperless: Recipe = {
       '${PAPERLESS_CONSUME}:/usr/src/paperless/consume',
     ],
     ports: ['${PAPERLESS_PORT}:8000'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

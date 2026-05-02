@@ -36,8 +36,6 @@ export const mosquitto: Recipe = {
       '${MOSQUITTO_DATA}/log:/mosquitto/log',
     ],
     ports: ['${MOSQUITTO_PORT}:1883'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

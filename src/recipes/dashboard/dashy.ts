@@ -32,8 +32,6 @@ export const dashy: Recipe = {
     environment: ['TZ=${TZ}'],
     volumes: ['${DASHY_DATA}:/app/user-data'],
     ports: ['${DASHY_PORT}:8080'],
-    security_opt: ['no-new-privileges:true'],
-    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

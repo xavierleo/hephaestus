@@ -174,7 +174,7 @@ describe('Recipe registry — container hardening', () => {
     }
   })
 
-  it('keeps normal app recipes on the default no-new-privileges and cap-drop hardening profile', () => {
+  it('does not apply restrictive security defaults to normal app recipes', () => {
     const normalRecipes = allRecipes.filter(recipe =>
       !recipe.tags.includes('privileged') &&
       !recipe.tags.includes('network-host') &&
@@ -189,8 +189,8 @@ describe('Recipe registry — container hardening', () => {
 
     expect(normalRecipes.length).toBeGreaterThan(0)
     for (const recipe of normalRecipes) {
-      expect(recipe.composeService.security_opt, `${recipe.id} should use no-new-privileges`).toContain('no-new-privileges:true')
-      expect(recipe.composeService.cap_drop, `${recipe.id} should drop ambient capabilities`).toEqual(['ALL'])
+      expect(recipe.composeService.security_opt ?? [], `${recipe.id} should not force no-new-privileges`).not.toContain('no-new-privileges:true')
+      expect(recipe.composeService.cap_drop, `${recipe.id} should not drop all capabilities`).not.toEqual(['ALL'])
     }
   })
 })
