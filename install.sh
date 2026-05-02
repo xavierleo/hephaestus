@@ -20,20 +20,20 @@ fi
 
 bold "Installing Hephaestus..."
 
-# ── Node.js LTS (via NodeSource) ───────────────────────────────────────────────
+# ── Node.js 24+ ────────────────────────────────────────────────────────────────
 if command -v node &>/dev/null; then
   NODE_MAJOR="$(node --version | cut -d. -f1 | tr -d 'v')"
-  if [ "$NODE_MAJOR" -ge 20 ]; then
+  if [ "$NODE_MAJOR" -ge 24 ]; then
     green "Node.js $(node --version) already installed"
   else
-    yellow "Node.js version too old, upgrading..."
-    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-    sudo apt-get install -y nodejs
+    red "Node.js $(node --version) found, but Hephaestus requires Node.js >=24."
+    red "Install Node.js 24 LTS, then run this installer again."
+    exit 1
   fi
 else
-  bold "Installing Node.js LTS..."
-  curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-  sudo apt-get install -y nodejs
+  red "Node.js not found. Hephaestus requires Node.js >=24."
+  red "Install Node.js 24 LTS, then run this installer again."
+  exit 1
 fi
 
 green "Node.js $(node --version) ready"
@@ -44,6 +44,11 @@ if [[ -n "${HEPHAESTUS_VERSION:-}" ]]; then
 else
   TAG="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" \
     | grep '"tag_name"' | head -1 | sed 's/.*"tag_name": "\(.*\)".*/\1/')" || true
+fi
+
+if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  red "Invalid release tag: ${TAG}"
+  exit 1
 fi
 
 if [[ -z "$TAG" ]]; then
@@ -79,18 +84,47 @@ green "Checksum OK"
 
 # ── Extract and install ────────────────────────────────────────────────────────
 bold "Installing to ${INSTALL_DIR}..."
-rm -rf "$INSTALL_DIR"
-mkdir -p "$INSTALL_DIR"
-tar -xzf "${TMP_DIR}/${TARBALL}" -C "$INSTALL_DIR"
+EXTRACT_DIR="${TMP_DIR}/extract"
+mkdir -p "$EXTRACT_DIR"
+
+while IFS= read -r entry; do
+  case "$entry" in
+    /*|*../*|../*|.*../*|"")
+      red "Unsafe tarball entry: ${entry}"
+      exit 1
+      ;;
+  esac
+done < <(tar -tzf "${TMP_DIR}/${TARBALL}")
+
+tar -xzf "${TMP_DIR}/${TARBALL}" -C "$EXTRACT_DIR"
+
+for required in dist/index.js install.sh package.json package-lock.json; do
+  if [[ ! -f "${EXTRACT_DIR}/${required}" ]]; then
+    red "Release tarball is missing ${required}"
+    exit 1
+  fi
+done
+
+BACKUP_DIR="${INSTALL_DIR}.previous"
+rm -rf "$BACKUP_DIR"
+if [[ -d "$INSTALL_DIR" ]]; then
+  mv "$INSTALL_DIR" "$BACKUP_DIR"
+fi
+mv "$EXTRACT_DIR" "$INSTALL_DIR"
 
 # Install production dependencies
-(cd "$INSTALL_DIR" && npm ci --omit=dev --silent)
+if ! (cd "$INSTALL_DIR" && npm ci --omit=dev --silent); then
+  red "Dependency install failed; rolling back."
+  rm -rf "$INSTALL_DIR"
+  if [[ -d "$BACKUP_DIR" ]]; then mv "$BACKUP_DIR" "$INSTALL_DIR"; fi
+  exit 1
+fi
 
 # ── Write the wrapper script ───────────────────────────────────────────────────
 bold "Writing ${BIN_PATH}..."
 WRAPPER="$(cat <<WRAPPER_EOF
 #!/usr/bin/env bash
-exec /usr/bin/node "${INSTALL_DIR}/dist/index.js" "\$@"
+exec node "${INSTALL_DIR}/dist/index.js" "\$@"
 WRAPPER_EOF
 )"
 
@@ -101,6 +135,14 @@ else
   echo "$WRAPPER" | sudo tee "$BIN_PATH" > /dev/null
   sudo chmod +x "$BIN_PATH"
 fi
+
+if ! "$BIN_PATH" --version >/dev/null; then
+  red "Installed binary failed smoke test; rolling back."
+  rm -rf "$INSTALL_DIR"
+  if [[ -d "$BACKUP_DIR" ]]; then mv "$BACKUP_DIR" "$INSTALL_DIR"; fi
+  exit 1
+fi
+rm -rf "$BACKUP_DIR"
 
 green "Hephaestus ${TAG} installed!"
 echo ""
