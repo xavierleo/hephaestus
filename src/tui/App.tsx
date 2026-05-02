@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Box, Text, useApp, useInput } from 'ink'
+import { Box, useApp, useInput } from 'ink'
 import { Spinner } from '@inkjs/ui'
 import type { WizardConfig, AppFlags, WizardScreen } from '../types/config.js'
 import { nextScreen, prevScreen, deriveDockerSocketPath } from '../types/config.js'

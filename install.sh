@@ -21,19 +21,67 @@ fi
 bold "Installing Hephaestus..."
 
 # ── Node.js 24+ ────────────────────────────────────────────────────────────────
+ensure_fnm() {
+  if command -v fnm &>/dev/null; then
+    return
+  fi
+
+  if [[ -d "${HOME}/.local/share/fnm" ]]; then
+    export PATH="${HOME}/.local/share/fnm:${PATH}"
+  fi
+
+  if command -v fnm &>/dev/null; then
+    return
+  fi
+
+  if ! command -v unzip &>/dev/null; then
+    yellow "unzip not found. Installing unzip for fnm..."
+    if command -v apt-get &>/dev/null; then
+      sudo apt-get update
+      sudo apt-get install -y unzip
+    else
+      red "unzip is required to install fnm. Install unzip, then run this installer again."
+      exit 1
+    fi
+  fi
+
+  bold "Installing fnm..."
+  curl -fsSL https://fnm.vercel.app/install | bash
+  export PATH="${HOME}/.local/share/fnm:${PATH}"
+
+  if ! command -v fnm &>/dev/null; then
+    red "fnm install completed, but fnm was not found on PATH."
+    red "Open a new shell or install Node.js 24 manually, then run this installer again."
+    exit 1
+  fi
+}
+
+activate_fnm() {
+  if command -v fnm &>/dev/null; then
+    eval "$(fnm env --shell bash)"
+  fi
+}
+
+install_node_24() {
+  ensure_fnm
+  activate_fnm
+  fnm install 24
+  fnm default 24
+  fnm use 24
+}
+
 if command -v node &>/dev/null; then
   NODE_MAJOR="$(node --version | cut -d. -f1 | tr -d 'v')"
   if [ "$NODE_MAJOR" -ge 24 ]; then
     green "Node.js $(node --version) already installed"
   else
-    red "Node.js $(node --version) found, but Hephaestus requires Node.js >=24."
-    red "Install Node.js 24 LTS, then run this installer again."
-    exit 1
+    yellow "Node.js $(node --version) found, but Hephaestus requires Node.js >=24."
+    bold "Installing Node.js 24 with fnm..."
+    install_node_24
   fi
 else
-  red "Node.js not found. Hephaestus requires Node.js >=24."
-  red "Install Node.js 24 LTS, then run this installer again."
-  exit 1
+  yellow "Node.js not found. Installing Node.js 24 with fnm."
+  install_node_24
 fi
 
 green "Node.js $(node --version) ready"
@@ -124,6 +172,12 @@ fi
 bold "Writing ${BIN_PATH}..."
 WRAPPER="$(cat <<WRAPPER_EOF
 #!/usr/bin/env bash
+if [[ -d "\${HOME}/.local/share/fnm" ]]; then
+  export PATH="\${HOME}/.local/share/fnm:\${PATH}"
+fi
+if command -v fnm >/dev/null 2>&1; then
+  eval "\$(fnm env --shell bash)"
+fi
 exec node "${INSTALL_DIR}/dist/index.js" "\$@"
 WRAPPER_EOF
 )"
