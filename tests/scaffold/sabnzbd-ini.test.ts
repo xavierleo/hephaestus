@@ -13,6 +13,8 @@ const config: WizardConfig = {
   dockerRootless: false,
   dockerSocketPath: '/var/run/docker.sock',
   mediaDir: '/mnt/nas/media',
+  usenetDir: '/mnt/nas/usenet',
+  torrentsDir: '/mnt/nas/torrents',
   hasNas: true,
   nasMountPath: '/mnt/nas',
   hasGpu: false,
@@ -50,12 +52,12 @@ describe('generateSabnzbdIni', () => {
 
   it('points tv category dir to the NAS-backed completed downloads subtree', () => {
     const ini = generateSabnzbdIni(config, 'any-key')
-    expect(ini).toContain('dir = /mnt/nas/media/downloads/complete/tv')
+    expect(ini).toContain('dir = /mnt/nas/usenet/tv')
   })
 
   it('points movies category dir to the NAS-backed completed downloads subtree', () => {
     const ini = generateSabnzbdIni(config, 'any-key')
-    expect(ini).toContain('dir = /mnt/nas/media/downloads/complete/movies')
+    expect(ini).toContain('dir = /mnt/nas/usenet/movies')
   })
 
   it('sets the incomplete download dir to the local baseDir — never NAS', () => {
@@ -66,7 +68,7 @@ describe('generateSabnzbdIni', () => {
 
   it('sets the global complete dir to the shared downloads location', () => {
     const ini = generateSabnzbdIni(config, 'any-key')
-    expect(ini).toContain('complete_dir = /mnt/nas/media/downloads/complete')
+    expect(ini).toContain('complete_dir = /mnt/nas/usenet')
   })
 
   it('listens on port 8080', () => {

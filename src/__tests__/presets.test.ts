@@ -52,9 +52,11 @@ describe('preset registry', () => {
 
 describe('preset wizard flow', () => {
   it('routes from config to presets to service selection', () => {
-    expect(nextScreen('CONFIG')).toBe('PRESET_SELECTOR')
+    expect(nextScreen('CONFIG')).toBe('MEDIA_FOLDERS')
+    expect(nextScreen('MEDIA_FOLDERS')).toBe('PRESET_SELECTOR')
     expect(nextScreen('PRESET_SELECTOR')).toBe('SERVICE_SELECTOR')
-    expect(prevScreen('PRESET_SELECTOR')).toBe('CONFIG')
+    expect(prevScreen('PRESET_SELECTOR')).toBe('MEDIA_FOLDERS')
+    expect(prevScreen('MEDIA_FOLDERS')).toBe('CONFIG')
   })
 
   it('replaces the current service selection when a preset is selected', () => {

@@ -21,6 +21,8 @@ function makeTestConfig(overrides: Partial<WizardConfig> = {}): WizardConfig {
     dockerRootless: false,
     dockerSocketPath: '/var/run/docker.sock',
     mediaDir: '/tmp/hephaestus-test/data/media',
+    usenetDir: '/tmp/hephaestus-test/downloads/usenet',
+    torrentsDir: '/tmp/hephaestus-test/downloads/torrents',
     hasNas: false,
     nasMountPath: '/mnt/nas',
     hasGpu: false,
@@ -103,6 +105,22 @@ describe('Scaffold: compose.yml YAML validity', () => {
     expect(service.devices).toEqual(['/dev/dri:/dev/dri'])
     expect(service.devices).not.toContain('/dev/dri/renderD128:/dev/dri/renderD128')
     expect(service.devices).not.toContain('/dev/dri/card1:/dev/dri/card1')
+  })
+
+  it('uses the discovered Usenet folder for SABnzbd completed downloads', () => {
+    const config = makeTestConfig({ selectedServices: ['sabnzbd'] })
+    const recipe = allRecipes.find(r => r.id === 'sabnzbd')!
+    const env = renderEnv([recipe], config)
+
+    expect(env).toContain('COMPLETE_DIR=/tmp/hephaestus-test/downloads/usenet')
+  })
+
+  it('uses the discovered torrent folder for qBittorrent completed downloads', () => {
+    const config = makeTestConfig({ selectedServices: ['qbittorrent'] })
+    const recipe = allRecipes.find(r => r.id === 'qbittorrent')!
+    const env = renderEnv([recipe], config)
+
+    expect(env).toContain('COMPLETE_DIR=/tmp/hephaestus-test/downloads/torrents')
   })
 })
 

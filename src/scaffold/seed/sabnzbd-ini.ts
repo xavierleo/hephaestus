@@ -1,7 +1,7 @@
 import type { WizardConfig } from '../../types/config.js'
 
 export function generateSabnzbdIni(config: WizardConfig, apiKey: string): string {
-  const completeDir = `${config.mediaDir}/downloads/complete`
+  const completeDir = config.usenetDir ?? `${config.mediaDir}/downloads/complete`
   const incompleteDir = `${config.baseDir}/sabnzbd/incomplete`
 
   return `[misc]

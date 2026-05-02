@@ -78,6 +78,8 @@ export function saveProfile(
     pgid: config.pgid ?? 1000,
     tz: config.tz ?? 'UTC',
     mediaDir: config.mediaDir ?? '',
+    usenetDir: config.usenetDir,
+    torrentsDir: config.torrentsDir,
     hasNas: config.hasNas ?? false,
     nasMountPath: config.nasMountPath ?? '',
     nasIp: config.nasIp,
@@ -129,7 +131,7 @@ export function mergeWithDetected(
   const puid = detected.puid ?? p.puid
   const dockerRootless = p.dockerRootless
   const stacksDir = normalizeStacksDir(p.stacksDir, p.baseDir)
-  const mediaDir = deriveMediaDir(p)
+  const mediaFolders = deriveMediaFolders(p)
 
   return {
     // saved values win — user explicitly configured these
@@ -137,7 +139,9 @@ export function mergeWithDetected(
     stacksDir,
     domain:           p.domain,
     hostIp:           p.hostIp,
-    mediaDir,
+    mediaDir:          mediaFolders.mediaDir,
+    usenetDir:         mediaFolders.usenetDir,
+    torrentsDir:       mediaFolders.torrentsDir,
     hasNas:           p.hasNas,
     nasMountPath:     p.nasMountPath,
     nasIp:            p.nasIp,
@@ -167,9 +171,25 @@ function normalizeStacksDir(stacksDir: string, baseDir: string): string {
   return path.join(parent, 'stacks')
 }
 
-function deriveMediaDir(config: ProfileConfig): string {
+function deriveMediaFolders(config: ProfileConfig): Pick<WizardConfig, 'mediaDir' | 'usenetDir' | 'torrentsDir'> {
   if (config.hasNas) {
-    return path.join(config.nasMountPath, 'media')
+    return {
+      mediaDir: config.mediaDir && isInsideOrEqual(config.mediaDir, config.nasMountPath)
+        ? config.mediaDir
+        : path.join(config.nasMountPath, 'media'),
+      usenetDir: config.usenetDir ?? path.join(config.nasMountPath, 'usenet'),
+      torrentsDir: config.torrentsDir ?? path.join(config.nasMountPath, 'torrents'),
+    }
   }
-  return config.mediaDir
+
+  return {
+    mediaDir: config.mediaDir,
+    usenetDir: config.usenetDir,
+    torrentsDir: config.torrentsDir,
+  }
+}
+
+function isInsideOrEqual(candidate: string, parent: string): boolean {
+  const relative = path.relative(parent, candidate)
+  return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
 }

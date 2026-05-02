@@ -17,6 +17,7 @@ import type { Profile } from '../profile/types.js'
 import { SaveProfile } from './screens/SaveProfile.js'
 import { ProfileManager } from './screens/ProfileManager.js'
 import { PresetSelector } from './screens/PresetSelector.js'
+import { MediaFolders } from './screens/MediaFolders.js'
 import { Done } from './screens/Done.js'
 
 interface AppProps {
@@ -36,6 +37,8 @@ export function App({ flags }: AppProps) {
     baseDir: `${defaultHomeDir}/docker-services`,
     stacksDir: `${defaultHomeDir}/stacks`,
     mediaDir: '/mnt/synology-media/media',
+    usenetDir: '/mnt/synology-media/usenet',
+    torrentsDir: '/mnt/synology-media/torrents',
     nasMountPath: '/mnt/synology-media',
     hasNas: false,
     domain: '',
@@ -83,12 +86,19 @@ export function App({ flags }: AppProps) {
   }
 
   const advance = (updates?: Partial<WizardConfig>) => {
+    const nextConfig = { ...config, ...updates }
     if (updates) updateConfig(updates)
-    setScreen(prev => nextScreen(prev))
+    setScreen(prev => {
+      if (prev === 'CONFIG' && !nextConfig.hasNas) return 'PRESET_SELECTOR'
+      return nextScreen(prev)
+    })
   }
 
   const goBack = () => {
-    setScreen(prev => prevScreen(prev))
+    setScreen(prev => {
+      if (prev === 'PRESET_SELECTOR' && !config.hasNas) return 'CONFIG'
+      return prevScreen(prev)
+    })
   }
 
   const currentRecipeVersions = (): Record<string, string> => {
@@ -175,6 +185,16 @@ export function App({ flags }: AppProps) {
   if (screen === 'SERVICE_SELECTOR') {
     return (
       <ServiceSelector
+        config={config}
+        onNext={updates => advance(updates)}
+        onBack={goBack}
+      />
+    )
+  }
+
+  if (screen === 'MEDIA_FOLDERS') {
+    return (
+      <MediaFolders
         config={config}
         onNext={updates => advance(updates)}
         onBack={goBack}

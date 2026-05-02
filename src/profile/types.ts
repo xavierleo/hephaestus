@@ -7,6 +7,8 @@ export interface ProfileConfig {
   pgid: number
   tz: string
   mediaDir: string
+  usenetDir?: string
+  torrentsDir?: string
   hasNas: boolean
   nasMountPath: string
   nasIp?: string

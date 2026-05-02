@@ -3,6 +3,7 @@ export type WizardScreen =
   | 'WELCOME'
   | 'DOCKER_MODE'
   | 'CONFIG'
+  | 'MEDIA_FOLDERS'
   | 'PRESET_SELECTOR'
   | 'SERVICE_SELECTOR'
   | 'REVIEW'
@@ -16,6 +17,7 @@ export const SCREEN_ORDER: WizardScreen[] = [
   'WELCOME',
   'DOCKER_MODE',
   'CONFIG',
+  'MEDIA_FOLDERS',
   'PRESET_SELECTOR',
   'SERVICE_SELECTOR',
   'REVIEW',
@@ -39,6 +41,8 @@ export interface WizardConfig {
 
   // Media
   mediaDir: string       // /mnt/synology-media/media
+  usenetDir?: string     // /mnt/synology-media/usenet
+  torrentsDir?: string   // /mnt/synology-media/torrents
 
   // NAS
   hasNas: boolean

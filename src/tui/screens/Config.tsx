@@ -141,6 +141,12 @@ function fieldsToConfig(fields: FieldValues): Partial<WizardConfig> {
     mediaDir: fields.hasNas === 'true'
       ? `${fields.nasMountPath}/media`
       : `${fields.baseDir}/media`,
+    usenetDir: fields.hasNas === 'true'
+      ? `${fields.nasMountPath}/usenet`
+      : `${fields.baseDir}/downloads/usenet`,
+    torrentsDir: fields.hasNas === 'true'
+      ? `${fields.nasMountPath}/torrents`
+      : `${fields.baseDir}/downloads/torrents`,
   }
 }
 

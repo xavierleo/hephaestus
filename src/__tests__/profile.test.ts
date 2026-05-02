@@ -292,5 +292,26 @@ describe('mergeWithDetected', () => {
     const result = mergeWithDetected(profile, { puid: 1001 })
 
     expect(result.mediaDir).toBe('/mnt/synology-media/media')
+    expect(result.usenetDir).toBe('/mnt/synology-media/usenet')
+    expect(result.torrentsDir).toBe('/mnt/synology-media/torrents')
+  })
+
+  it('preserves NAS media folders that are already inside the NAS mount', () => {
+    const profile = makeProfile({
+      config: {
+        ...makeProfile().config,
+        hasNas: true,
+        nasMountPath: '/mnt/nas',
+        mediaDir: '/mnt/nas/libraries',
+        usenetDir: '/mnt/nas/downloads/usenet',
+        torrentsDir: '/mnt/nas/downloads/torrents',
+      },
+    })
+
+    const result = mergeWithDetected(profile, { puid: 1001 })
+
+    expect(result.mediaDir).toBe('/mnt/nas/libraries')
+    expect(result.usenetDir).toBe('/mnt/nas/downloads/usenet')
+    expect(result.torrentsDir).toBe('/mnt/nas/downloads/torrents')
   })
 })

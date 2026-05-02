@@ -20,7 +20,7 @@ export const sabnzbd: Recipe = {
     {
       key: 'COMPLETE_DIR',
       description: 'Completed downloads directory',
-      defaultValue: config => `${config.mediaDir}/downloads/complete`,
+      defaultValue: config => config.usenetDir ?? `${config.mediaDir}/downloads/complete`,
       secret: false,
       required: true,
     },

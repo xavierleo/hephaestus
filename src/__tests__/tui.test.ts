@@ -20,6 +20,19 @@ describe('TUI defaults', () => {
     expect(appSource).not.toContain("stacksDir: '/opt/stacks'")
     expect(configSource).not.toContain("stacksDir: config.stacksDir ?? '/opt/stacks'")
   })
+
+  it('adds a media folder confirmation screen after NAS configuration', () => {
+    const configSource = readFileSync('src/types/config.ts', 'utf-8')
+    const appSource = readFileSync('src/tui/App.tsx', 'utf-8')
+    const mediaFoldersSource = readFileSync('src/tui/screens/MediaFolders.tsx', 'utf-8')
+
+    expect(configSource).toContain("'MEDIA_FOLDERS'")
+    expect(appSource).toContain("prev === 'CONFIG' && !nextConfig.hasNas")
+    expect(mediaFoldersSource).toContain('detectMediaFoldersWithFallback')
+    expect(mediaFoldersSource).toContain('Usenet completed downloads')
+    expect(mediaFoldersSource).toContain('Torrent completed downloads')
+    expect(mediaFoldersSource).toContain('not found yet')
+  })
 })
 
 describe('profile summaries', () => {
