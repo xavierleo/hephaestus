@@ -17,6 +17,7 @@ import type { Profile } from '../profile/types.js'
 import { SaveProfile } from './screens/SaveProfile.js'
 import { ProfileManager } from './screens/ProfileManager.js'
 import { PresetSelector } from './screens/PresetSelector.js'
+import { Done } from './screens/Done.js'
 
 interface AppProps {
   flags: AppFlags
@@ -220,14 +221,7 @@ export function App({ flags }: AppProps) {
   }
 
   if (screen === 'DONE') {
-    return (
-      <Box flexDirection="column" padding={1}>
-        <Text color="green" bold>✓ Scaffold complete!</Text>
-        <Text dimColor>Your stacks are in {config.stacksDir}.</Text>
-        <Text dimColor>{'Next: cd <stack-dir> && docker compose up -d'}</Text>
-        <Text dimColor>{'Press q to exit'}</Text>
-      </Box>
-    )
+    return <Done config={config as WizardConfig} preflight={preflight} />
   }
 
   if (screen === 'SAVE_PROFILE') {
