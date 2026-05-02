@@ -19,6 +19,24 @@ export interface PortConflict {
   b: string
 }
 
+export type RiskSeverity = 'medium' | 'high'
+
+export type RecipeRiskKind =
+  | 'privileged'
+  | 'docker-socket'
+  | 'host-network'
+  | 'device'
+  | 'capability'
+  | 'security-opt'
+
+export interface RecipeRiskFinding {
+  recipeId: string
+  recipeName: string
+  severity: RiskSeverity
+  kind: RecipeRiskKind
+  message: string
+}
+
 export function findPortConflicts(
   selectedIds: string[],
   recipeMap: ReadonlyMap<string, Recipe>,
@@ -74,4 +92,58 @@ export function findDepWarnings(
     }
   }
   return warnings
+}
+
+export function findRecipeRiskWarnings(
+  selectedIds: string[],
+  recipeMap: ReadonlyMap<string, Recipe>,
+): RecipeRiskFinding[] {
+  const findings: RecipeRiskFinding[] = []
+
+  for (const id of selectedIds) {
+    const recipe = recipeMap.get(id)
+    if (!recipe) continue
+    const svc = recipe.composeService
+    const add = (severity: RiskSeverity, kind: RecipeRiskKind, message: string) => {
+      findings.push({ recipeId: recipe.id, recipeName: recipe.name, severity, kind, message })
+    }
+
+    if (recipe.tags.includes('privileged') || svc['privileged'] === true) {
+      add('high', 'privileged', `${recipe.name} runs with privileged container access.`)
+    }
+
+    if (svc.network_mode === 'host') {
+      add('medium', 'host-network', `${recipe.name} uses host networking.`)
+    }
+
+    for (const volume of svc.volumes ?? []) {
+      if (volume.includes('/var/run/docker.sock')) {
+        const readOnly = volume.endsWith(':ro')
+        add(
+          readOnly ? 'medium' : 'high',
+          'docker-socket',
+          `${recipe.name} mounts the Docker socket${readOnly ? ' read-only' : ' read-write'}.`,
+        )
+      }
+    }
+
+    for (const device of svc.devices ?? []) {
+      if (device.startsWith('/dev/') || device.includes(':/dev/')) {
+        add('medium', 'device', `${recipe.name} mounts host device ${device}.`)
+      }
+    }
+
+    for (const cap of svc.cap_add ?? []) {
+      const severity: RiskSeverity = ['SYS_ADMIN', 'SYS_MODULE'].includes(cap) ? 'high' : 'medium'
+      add(severity, 'capability', `${recipe.name} adds Linux capability ${cap}.`)
+    }
+
+    for (const securityOpt of svc.security_opt ?? []) {
+      if (securityOpt.includes('unconfined')) {
+        add('high', 'security-opt', `${recipe.name} weakens container confinement with ${securityOpt}.`)
+      }
+    }
+  }
+
+  return findings
 }

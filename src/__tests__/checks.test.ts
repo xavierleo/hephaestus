@@ -4,6 +4,7 @@ import {
   findPortConflicts,
   findMutexViolations,
   findDepWarnings,
+  findRecipeRiskWarnings,
   MUTEX_GROUPS,
 } from '../tui/utils/review-checks.js'
 import type { Recipe } from '../recipes/types.js'
@@ -130,5 +131,35 @@ describe('findDepWarnings', () => {
     const recipeMap = new Map(allRecipes.map(r => [r.id, r]))
     const selection = noDepRecipes.map(r => r.id)
     expect(findDepWarnings(selection, recipeMap)).toHaveLength(0)
+  })
+})
+
+describe('findRecipeRiskWarnings', () => {
+  const recipeMap = new Map(allRecipes.map(r => [r.id, r]))
+
+  it('warns for Docker socket recipes', () => {
+    const warnings = findRecipeRiskWarnings(['dockge', 'homepage'], recipeMap)
+
+    expect(warnings.some(w => w.recipeId === 'dockge' && w.kind === 'docker-socket' && w.severity === 'high')).toBe(true)
+    expect(warnings.some(w => w.recipeId === 'homepage' && w.kind === 'docker-socket')).toBe(true)
+  })
+
+  it('warns for host-network recipes', () => {
+    const warnings = findRecipeRiskWarnings(['plex', 'homeassistant'], recipeMap)
+
+    expect(warnings.some(w => w.recipeId === 'plex' && w.kind === 'host-network')).toBe(true)
+    expect(warnings.some(w => w.recipeId === 'homeassistant' && w.kind === 'host-network')).toBe(true)
+  })
+
+  it('warns for privileged capability and device recipes', () => {
+    const warnings = findRecipeRiskWarnings(['frigate', 'wireguard', 'gluetun'], recipeMap)
+
+    expect(warnings.some(w => w.recipeId === 'frigate' && w.kind === 'privileged')).toBe(true)
+    expect(warnings.some(w => w.recipeId === 'wireguard' && w.kind === 'capability')).toBe(true)
+    expect(warnings.some(w => w.recipeId === 'gluetun' && w.kind === 'device')).toBe(true)
+  })
+
+  it('does not warn for safe recipes', () => {
+    expect(findRecipeRiskWarnings(['mealie'], recipeMap)).toHaveLength(0)
   })
 })

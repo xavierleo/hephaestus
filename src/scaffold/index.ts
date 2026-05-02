@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync, chmodSync, renameSync, readFileSync, existsSync } from 'fs'
-import { join } from 'path'
+import { isAbsolute, join, relative, resolve } from 'path'
 import { parse as parseYaml } from 'yaml'
 import type { WizardConfig } from '../types/config.js'
 import { recipeMap } from '../recipes/registry.js'
@@ -80,6 +80,8 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
   const selectedRecipes = config.selectedServices
     .map(id => recipeMap.get(id))
     .filter((r): r is Recipe => r !== undefined)
+
+  validateScaffoldConfig(config, selectedRecipes)
 
   // 1 — System checks (already done in preflight, just report)
   report('System checks', 'done')
@@ -224,7 +226,50 @@ function readExistingApiKey(recipe: Recipe, config: WizardConfig): string | null
     // bazarr config.yaml
     const yamlMatch = content.match(/^apikey:\s*(.+)$/m)
     if (yamlMatch?.[1]) return yamlMatch[1].trim()
-  } catch { /* seed file unreadable — generate fresh key */ }
+  } catch (err) {
+    throw new Error(
+      `Could not read existing seed config for ${recipe.id}; refusing to rotate generated API keys. ` +
+      `${err instanceof Error ? err.message : String(err)}`,
+    )
+  }
 
   return null
+}
+
+export function validateScaffoldConfig(config: WizardConfig, recipes: Recipe[]): void {
+  for (const [label, value] of Object.entries({
+    baseDir: config.baseDir,
+    stacksDir: config.stacksDir,
+    mediaDir: config.mediaDir,
+  })) {
+    if (!isAbsolute(value)) {
+      throw new Error(`${label} must be absolute: ${value}`)
+    }
+  }
+
+  for (const recipe of recipes) {
+    assertPathInside(join(config.stacksDir, recipe.id), config.stacksDir, `stack path for ${recipe.id}`)
+    for (const seed of recipe.seedConfigs) {
+      const seedPath = typeof seed.path === 'function'
+        ? seed.path(config)
+        : join(config.stacksDir, recipe.id, seed.path)
+      if (
+        !isPathInside(seedPath, config.baseDir) &&
+        !isPathInside(seedPath, config.stacksDir)
+      ) {
+        throw new Error(`Seed path for ${recipe.id} must stay inside baseDir or stacksDir: ${seedPath}`)
+      }
+    }
+  }
+}
+
+function assertPathInside(path: string, root: string, label: string): void {
+  if (!isPathInside(path, root)) {
+    throw new Error(`${label} must stay inside ${root}: ${path}`)
+  }
+}
+
+function isPathInside(path: string, root: string): boolean {
+  const rel = relative(resolve(root), resolve(path))
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel))
 }

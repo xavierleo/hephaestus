@@ -4,13 +4,14 @@ import React from 'react'
 import { App } from './tui/App.js'
 import type { AppFlags, WizardConfig } from './types/config.js'
 import { allRecipes } from './recipes/registry.js'
+import { getCliVersion } from './version.js'
 
 const program = new Command()
 
 program
   .name('hephaestus')
   .description('Homelab stack scaffolder — Ninite for homelabs')
-  .version('1.0.0')
+  .version(getCliVersion())
   .option('--dry-run', 'Preview everything without writing any files', false)
   .option('--stacks-only', 'Re-scaffold stacks, skip system setup screens', false)
   .option('--list', 'Print available services and exit', false)
@@ -18,13 +19,14 @@ program
 
 program
   .command('update')
-  .description('Pull latest changes and rebuild')
+  .description('Update from the latest verified GitHub release')
   .action(async () => {
-    const { execa } = await import('execa')
+    const { runReleaseUpdate } = await import('./system/release.js')
     const hephaestusDir = process.env['HEPHAESTUS_DIR'] ?? `${process.env['HOME']}/.hephaestus`
-    await execa('git', ['-C', hephaestusDir, 'pull'], { stdio: 'inherit' })
-    await execa('npm', ['install', '--prefix', hephaestusDir], { stdio: 'inherit' })
-    await execa('npm', ['run', 'build', '--prefix', hephaestusDir], { stdio: 'inherit' })
+    await runReleaseUpdate({
+      installDir: hephaestusDir,
+      binPath: process.env['HEPHAESTUS_BIN'] ?? '/usr/local/bin/hephaestus',
+    })
     console.log('✓ Hephaestus updated successfully')
   })
 

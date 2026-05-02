@@ -1,9 +1,9 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { Box, Text, useInput } from 'ink'
 import type { WizardConfig, AppFlags } from '../../types/config.js'
 import type { PreflightResult } from '../../system/checks.js'
 import { recipeMap } from '../../recipes/registry.js'
-import { findPortConflicts, findMutexViolations, findDepWarnings } from '../utils/review-checks.js'
+import { findPortConflicts, findMutexViolations, findDepWarnings, findRecipeRiskWarnings } from '../utils/review-checks.js'
 
 interface Props {
   config: WizardConfig
@@ -17,8 +17,17 @@ interface Props {
 const DIVIDER = '─'.repeat(75)
 
 export function Review({ config, preflight, flags, profileRecipeVersions, onNext, onBack }: Props) {
-  useInput((_input, key) => {
-    if (key.return) onNext()
+  const [riskAcknowledged, setRiskAcknowledged] = useState(false)
+  const riskWarnings = findRecipeRiskWarnings(config.selectedServices, recipeMap)
+  const requiresRiskAck = riskWarnings.length > 0 && !flags.dryRun
+
+  useEffect(() => {
+    setRiskAcknowledged(false)
+  }, [config.selectedServices.join('|')])
+
+  useInput((input, key) => {
+    if (input.toLowerCase() === 'a' && requiresRiskAck) setRiskAcknowledged(true)
+    if (key.return && (!requiresRiskAck || riskAcknowledged)) onNext()
     if (key.escape) onBack()
   })
 
@@ -86,6 +95,26 @@ export function Review({ config, preflight, flags, profileRecipeVersions, onNext
               <Text dimColor>{msg}</Text>
             </Box>
           ))}
+        </Box>
+      )}
+
+      {riskWarnings.length > 0 && (
+        <Box marginTop={1} flexDirection="column">
+          <Text color="yellow" bold>Security warnings</Text>
+          {riskWarnings.map((warning, index) => (
+            <Box key={`${warning.recipeId}-${warning.kind}-${index}`}>
+              <Text color={warning.severity === 'high' ? 'red' : 'yellow'}>
+                {`  ${warning.severity.toUpperCase()} `}
+              </Text>
+              <Text dimColor>{warning.message}</Text>
+            </Box>
+          ))}
+          {requiresRiskAck && !riskAcknowledged && (
+            <Text color="yellow">  Press a to acknowledge these risks before scaffolding.</Text>
+          )}
+          {requiresRiskAck && riskAcknowledged && (
+            <Text color="green">  Risks acknowledged.</Text>
+          )}
         </Box>
       )}
 
@@ -191,6 +220,13 @@ export function Review({ config, preflight, flags, profileRecipeVersions, onNext
       <Box>
         {hasBlockers ? (
           <Text color="red">Go back and resolve the issues above before scaffolding.</Text>
+        ) : requiresRiskAck && !riskAcknowledged ? (
+          <>
+            <Text bold>a</Text>
+            <Text dimColor> to acknowledge security warnings   </Text>
+            <Text bold>Esc</Text>
+            <Text dimColor> to go back</Text>
+          </>
         ) : (
           <>
             <Text bold>Enter</Text>
