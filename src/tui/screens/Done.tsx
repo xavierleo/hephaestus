@@ -39,7 +39,7 @@ export function Done({ config, preflight }: DoneProps) {
         </Box>
       )}
 
-      <Text dimColor marginTop={1}>Press q to exit</Text>
+      <Box marginTop={1}><Text dimColor>Press q to exit</Text></Box>
     </Box>
   )
 }
