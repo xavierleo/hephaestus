@@ -71,6 +71,8 @@ export const readarr: Recipe = {
       '${COMPLETE_DIR}:/downloads/complete',
     ],
     ports: ['${READARR_PORT}:8787'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

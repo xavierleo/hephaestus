@@ -65,6 +65,8 @@ export const sabnzbd: Recipe = {
       '${INCOMPLETE_DIR}:/downloads/incomplete',
     ],
     ports: ['8080:8080'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [

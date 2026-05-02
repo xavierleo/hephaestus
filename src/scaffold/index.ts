@@ -8,10 +8,14 @@ import { renderCompose } from './compose.js'
 import { renderEnv, renderGlobalEnv } from './env.js'
 import { writeSeedConfigs } from './seed.js'
 import { renderSetupMd } from './docs.js'
+import { createDockerNetwork } from '../system/docker.js'
+
+const SHARED_NETWORK = 'cerebro-net'
 
 export interface ScaffoldOptions {
   dryRun: boolean
   onProgress?: (label: string, status: 'running' | 'done' | 'error', detail?: string) => void
+  ensureNetwork?: (networkName: string) => Promise<void>
 }
 
 export interface ScaffoldResult {
@@ -84,6 +88,7 @@ function renderParentCompose(recipes: Recipe[]): string {
 
 export async function runScaffold(config: WizardConfig, options: ScaffoldOptions): Promise<ScaffoldResult> {
   const { dryRun, onProgress } = options
+  const ensureNetwork = options.ensureNetwork ?? createDockerNetwork
   const report = (label: string, status: 'running' | 'done' | 'error', detail?: string) =>
     onProgress?.(label, status, detail)
   const newEnvVars = new Map<string, string[]>()
@@ -104,6 +109,18 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
     createDirectoryOrThrow(config.stacksDir, 'stacks directory')
   }
   report('Creating directories', 'done')
+
+  report(`Docker network: ${SHARED_NETWORK}`, 'running')
+  if (!dryRun) {
+    try {
+      await ensureNetwork(SHARED_NETWORK)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      report(`Docker network: ${SHARED_NETWORK}`, 'error', message)
+      throw new Error(`Could not create Docker network ${SHARED_NETWORK}: ${message}`)
+    }
+  }
+  report(`Docker network: ${SHARED_NETWORK}`, 'done')
 
   // 3 — Write _global.env
   report('Writing _global.env', 'running')
@@ -212,7 +229,9 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
       const detail = seeded.length > 0 ? `seeded: ${seeded.join(', ')}` : undefined
       report(recipe.id, 'done', detail)
     } catch (err) {
-      report(recipe.id, 'error', err instanceof Error ? err.message : String(err))
+      const message = err instanceof Error ? err.message : String(err)
+      report(recipe.id, 'error', message)
+      throw err
     }
   }
 

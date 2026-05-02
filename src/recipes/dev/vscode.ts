@@ -65,6 +65,8 @@ export const vscode: Recipe = {
     ],
     volumes: ['${VSCODE_DATA}:/config'],
     ports: ['${VSCODE_PORT}:8443'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

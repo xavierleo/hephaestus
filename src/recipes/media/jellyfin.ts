@@ -38,6 +38,27 @@ export const jellyfin: Recipe = {
       required: true,
     },
     {
+      key: 'PUID',
+      description: 'User ID',
+      defaultValue: config => String(config.puid),
+      secret: false,
+      required: true,
+    },
+    {
+      key: 'PGID',
+      description: 'Group ID',
+      defaultValue: config => String(config.pgid),
+      secret: false,
+      required: true,
+    },
+    {
+      key: 'TZ',
+      description: 'Timezone',
+      defaultValue: config => config.tz,
+      secret: false,
+      required: true,
+    },
+    {
       key: 'RENDER_GID',
       description: 'GID of /dev/dri/renderD* — must match host',
       defaultValue: config => String(config.renderGid),
@@ -47,10 +68,10 @@ export const jellyfin: Recipe = {
   ],
 
   composeService: {
-    image: 'jellyfin/jellyfin:latest',
+    image: 'lscr.io/linuxserver/jellyfin:latest',
     container_name: 'jellyfin',
     restart: 'unless-stopped',
-    environment: ['TZ=${TZ}'],
+    environment: ['PUID=${PUID}', 'PGID=${PGID}', 'TZ=${TZ}'],
     volumes: [
       '${JELLYFIN_DATA}:/config',
       '${JELLYFIN_CACHE}:/cache',

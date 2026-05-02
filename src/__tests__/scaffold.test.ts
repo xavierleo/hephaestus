@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { mkdtempSync, rmSync, existsSync, statSync, readdirSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { parse as parseYaml } from 'yaml'
+import { execa } from 'execa'
 import { renderCompose } from '../scaffold/compose.js'
 import { renderEnv, renderGlobalEnv } from '../scaffold/env.js'
 import { createDirectoryOrThrow, runScaffold } from '../scaffold/index.js'
@@ -32,6 +33,13 @@ function makeTestConfig(overrides: Partial<WizardConfig> = {}): WizardConfig {
     selectedServices: ['jellyfin'],
     ...overrides,
   }
+}
+
+function runTestScaffold(
+  config: WizardConfig,
+  options: Omit<Parameters<typeof runScaffold>[1], 'ensureNetwork'> = { dryRun: false },
+) {
+  return runScaffold(config, { ensureNetwork: async () => undefined, ...options })
 }
 
 describe('Scaffold: compose.yml YAML validity', () => {
@@ -206,13 +214,34 @@ describe('Scaffold: atomic write (integration)', () => {
   })
 
   it('writes compose.yml, .env, SETUP.md into a stack subdirectory', async () => {
+    const ensureNetwork = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
     const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin'] })
-    await runScaffold(config, { dryRun: false })
+    await runScaffold(config, { dryRun: false, ensureNetwork })
 
     const stackDir = join(tmpStacks, 'jellyfin')
     expect(existsSync(join(stackDir, 'compose.yml'))).toBe(true)
     expect(existsSync(join(stackDir, '.env'))).toBe(true)
     expect(existsSync(join(stackDir, 'SETUP.md'))).toBe(true)
+    expect(ensureNetwork).toHaveBeenCalledWith('cerebro-net')
+  })
+
+  it('does not create the shared Docker network during dry runs', async () => {
+    const ensureNetwork = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+    const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin'] })
+
+    await runScaffold(config, { dryRun: true, ensureNetwork })
+
+    expect(ensureNetwork).not.toHaveBeenCalled()
+    expect(existsSync(join(tmpStacks, 'jellyfin'))).toBe(false)
+  })
+
+  it('fails clearly when the shared Docker network cannot be created', async () => {
+    const ensureNetwork = vi.fn<() => Promise<void>>().mockRejectedValue(new Error('docker unavailable'))
+    const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin'] })
+
+    await expect(runScaffold(config, { dryRun: false, ensureNetwork })).rejects.toThrow(
+      /Could not create Docker network cerebro-net: docker unavailable/,
+    )
   })
 
   it('creates local docker-services folders referenced by generated app env files', async () => {
@@ -222,7 +251,7 @@ describe('Scaffold: atomic write (integration)', () => {
       selectedServices: ['jellyfin', 'paperless', 'sabnzbd'],
     })
 
-    await runScaffold(config, { dryRun: false })
+    await runTestScaffold(config, { dryRun: false })
 
     expect(existsSync(join(tmpBase, 'jellyfin', 'config'))).toBe(true)
     expect(existsSync(join(tmpBase, 'jellyfin', 'cache'))).toBe(true)
@@ -245,7 +274,7 @@ describe('Scaffold: atomic write (integration)', () => {
       selectedServices: ['jellyfin', 'sabnzbd', 'qbittorrent'],
     })
 
-    await runScaffold(config, { dryRun: false })
+    await runTestScaffold(config, { dryRun: false })
 
     expect(existsSync(join(tmpBase, 'jellyfin', 'config'))).toBe(true)
     expect(existsSync(join(tmpBase, 'sabnzbd', 'config'))).toBe(true)
@@ -257,7 +286,7 @@ describe('Scaffold: atomic write (integration)', () => {
 
   it('writes a parent compose.yml that includes every selected stack', async () => {
     const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin', 'bazarr'] })
-    await runScaffold(config, { dryRun: false })
+    await runTestScaffold(config, { dryRun: false })
 
     const rootCompose = join(tmpStacks, 'compose.yml')
     expect(existsSync(rootCompose)).toBe(true)
@@ -271,7 +300,7 @@ describe('Scaffold: atomic write (integration)', () => {
 
   it('.env file has mode 0o600 (owner-read/write only)', async () => {
     const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin'] })
-    await runScaffold(config, { dryRun: false })
+    await runTestScaffold(config, { dryRun: false })
 
     const envPath = join(tmpStacks, 'jellyfin', '.env')
     const mode = statSync(envPath).mode & 0o777
@@ -280,7 +309,7 @@ describe('Scaffold: atomic write (integration)', () => {
 
   it('leaves no .tmp files behind after a successful scaffold', async () => {
     const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin'] })
-    await runScaffold(config, { dryRun: false })
+    await runTestScaffold(config, { dryRun: false })
 
     const allFiles = readdirSync(join(tmpStacks, 'jellyfin'))
     const tmpFiles = allFiles.filter(f => f.endsWith('.tmp'))
@@ -289,16 +318,28 @@ describe('Scaffold: atomic write (integration)', () => {
 
   it('dryRun mode writes no files', async () => {
     const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin'] })
-    await runScaffold(config, { dryRun: true })
+    await runTestScaffold(config, { dryRun: true })
 
     expect(existsSync(join(tmpStacks, 'jellyfin'))).toBe(false)
+  })
+
+  it('rejects when an individual recipe cannot be scaffolded after reporting the recipe error', async () => {
+    const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin'] })
+    const onProgress = vi.fn()
+    const { writeFileSync } = await import('fs')
+    writeFileSync(join(tmpBase, 'jellyfin'), 'not a directory', 'utf-8')
+
+    await expect(runScaffold(config, { dryRun: false, onProgress, ensureNetwork: async () => undefined })).rejects.toThrow(
+      /Could not create directory for jellyfin/,
+    )
+    expect(onProgress).toHaveBeenCalledWith('jellyfin', 'error', expect.stringMatching(/Could not create directory/))
   })
 
   it('re-running scaffold preserves user-edited recipe env var values', async () => {
     const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin'] })
 
     // First run
-    await runScaffold(config, { dryRun: false })
+    await runTestScaffold(config, { dryRun: false })
 
     // Simulate a user changing a recipe env var value (e.g. overriding the default port)
     const envPath = join(tmpStacks, 'jellyfin', '.env')
@@ -309,7 +350,7 @@ describe('Scaffold: atomic write (integration)', () => {
     chmodSync(envPath, 0o600)
 
     // Second run — the custom value should survive the merge
-    await runScaffold(config, { dryRun: false })
+    await runTestScaffold(config, { dryRun: false })
     const afterRerun = readFileSync(envPath, 'utf-8')
     expect(afterRerun).toContain('JELLYFIN_PORT=9999')
   })
@@ -326,7 +367,7 @@ describe('Scaffold: atomic write (integration)', () => {
       selectedServices: ['sabnzbd', 'qbittorrent'],
     })
 
-    await runScaffold(config, { dryRun: false })
+    await runTestScaffold(config, { dryRun: false })
 
     const { readFileSync, writeFileSync, chmodSync } = await import('fs')
     const sabEnvPath = join(tmpStacks, 'sabnzbd', '.env')
@@ -349,12 +390,37 @@ describe('Scaffold: atomic write (integration)', () => {
     chmodSync(sabEnvPath, 0o600)
     chmodSync(qbitEnvPath, 0o600)
 
-    await runScaffold(config, { dryRun: false })
+    await runTestScaffold(config, { dryRun: false })
 
     expect(readFileSync(sabEnvPath, 'utf-8')).toContain('MEDIA_DIR=/mnt/synology-media/media')
     expect(readFileSync(sabEnvPath, 'utf-8')).toContain('COMPLETE_DIR=/mnt/synology-media/usenet')
     expect(readFileSync(qbitEnvPath, 'utf-8')).toContain('MEDIA_DIR=/mnt/synology-media/media')
     expect(readFileSync(qbitEnvPath, 'utf-8')).toContain('COMPLETE_DIR=/mnt/synology-media/torrents')
+  })
+
+  it('passes docker compose config for representative generated stack shapes when Docker Compose is available', async () => {
+    try {
+      await execa('docker', ['compose', 'version'])
+    } catch (err) {
+      console.warn(`Skipping docker compose config validation: ${err instanceof Error ? err.message : String(err)}`)
+      return
+    }
+
+    const config = makeTestConfig({
+      baseDir: tmpBase,
+      stacksDir: tmpStacks,
+      hasGpu: true,
+      selectedServices: [
+        'jellyfin',
+        'homeassistant',
+        'gluetun',
+        'sabnzbd',
+        'homepage',
+      ],
+    })
+
+    await runScaffold(config, { dryRun: false, ensureNetwork: async () => undefined })
+    await expect(execa('docker', ['compose', '-f', join(tmpStacks, 'compose.yml'), 'config'])).resolves.toBeDefined()
   })
 })
 

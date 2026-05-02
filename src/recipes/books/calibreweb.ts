@@ -63,6 +63,8 @@ export const calibreweb: Recipe = {
       '${CALIBRE_LIBRARY}:/books',
     ],
     ports: ['${CALIBREWEB_PORT}:8083'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

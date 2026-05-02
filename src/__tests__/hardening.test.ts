@@ -30,6 +30,10 @@ function makeConfig(overrides: Partial<WizardConfig> = {}): WizardConfig {
   }
 }
 
+function runTestScaffold(config: WizardConfig, options: { dryRun: boolean }) {
+  return runScaffold(config, { ...options, ensureNetwork: async () => undefined })
+}
+
 describe('NAS credential hardening', () => {
   it('renders CIFS credentials separately from fstab entries', () => {
     const credentialsPath = credentialsPathForMount('/mnt/synology-media')
@@ -80,7 +84,7 @@ describe('secret rendering hardening', () => {
         selectedServices: ['jellyfin'],
       })
 
-      await runScaffold(config, { dryRun: false })
+      await runTestScaffold(config, { dryRun: false })
 
       expect(renderGlobalEnv(config)).not.toContain('super-secret')
       expect(readFileSync(join(tmpStacks, 'jellyfin', 'SETUP.md'), 'utf-8')).not.toContain('super-secret')
@@ -106,7 +110,7 @@ describe('scaffold path and seed hardening', () => {
       mkdirSync(join(tmpBase, 'sonarr', 'config', 'config.xml'), { recursive: true })
 
       await expect(
-        runScaffold(makeConfig({
+        runTestScaffold(makeConfig({
           baseDir: tmpBase,
           stacksDir: tmpStacks,
           mediaDir: join(tmpBase, 'media'),
@@ -123,7 +127,7 @@ describe('scaffold path and seed hardening', () => {
     const tmpBase = mkdtempSync(join(tmpdir(), 'heph-hardening-data-'))
     const tmpStacks = mkdtempSync(join(tmpdir(), 'heph-hardening-stacks-'))
     try {
-      await runScaffold(makeConfig({
+      await runTestScaffold(makeConfig({
         baseDir: tmpBase,
         stacksDir: tmpStacks,
         mediaDir: join(tmpBase, 'media'),

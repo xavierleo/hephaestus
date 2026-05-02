@@ -57,6 +57,8 @@ export const immich: Recipe = {
     ],
     ports: ['${IMMICH_PORT}:2283'],
     depends_on: ['immich-redis', 'immich-postgres'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

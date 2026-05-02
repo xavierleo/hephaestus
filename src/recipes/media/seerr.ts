@@ -32,6 +32,8 @@ export const seerr: Recipe = {
     environment: ['LOG_LEVEL=debug', 'TZ=${TZ}'],
     volumes: ['${SEERR_DATA}:/app/config'],
     ports: ['${SEERR_PORT}:5055'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

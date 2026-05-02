@@ -53,6 +53,8 @@ export const whisparr: Recipe = {
     environment: ['PUID=${PUID}', 'PGID=${PGID}', 'TZ=${TZ}'],
     volumes: ['${WHISPARR_DATA}:/config'],
     ports: ['${WHISPARR_PORT}:6969'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

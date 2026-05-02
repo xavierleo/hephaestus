@@ -23,8 +23,10 @@ export async function installDockerRootless(puid: number): Promise<void> {
 export async function createDockerNetwork(networkName: string): Promise<void> {
   try {
     await execa('docker', ['network', 'create', networkName])
-  } catch {
-    // Network may already exist — non-fatal
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    if (message.includes('already exists')) return
+    throw err
   }
 }
 

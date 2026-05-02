@@ -72,6 +72,8 @@ export const radarr: Recipe = {
       '${COMPLETE_DIR}:/downloads/complete',
     ],
     ports: ['${RADARR_PORT}:7878'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [

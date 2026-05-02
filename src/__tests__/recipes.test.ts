@@ -3,6 +3,20 @@ import { allRecipes } from '../recipes/registry.js'
 import { RecipeSchema } from '../recipes/types.js'
 import { MUTEX_GROUPS } from '../tui/utils/review-checks.js'
 
+function hasDockerSocket(recipeId: string): boolean {
+  const recipe = allRecipes.find(r => r.id === recipeId)
+  return recipe?.composeService.volumes?.some(volume => volume.includes('/var/run/docker.sock')) ?? false
+}
+
+function hasLowHostPort(recipeId: string): boolean {
+  const recipe = allRecipes.find(r => r.id === recipeId)
+  return recipe?.composeService.ports?.some(port => {
+    const hostPort = port.split(':')[0]
+    const numericPort = Number(hostPort?.replace(/\$\{[^}]+\}/g, recipe.envVars.find(env => env.key === hostPort?.slice(2, -1))?.defaultValue as string ?? '0'))
+    return Number.isFinite(numericPort) && numericPort > 0 && numericPort < 1024
+  }) ?? false
+}
+
 describe('Recipe registry — IDs', () => {
   it('all recipe IDs are unique', () => {
     const ids = allRecipes.map(r => r.id)
@@ -119,5 +133,55 @@ describe('Recipe registry — Frigate', () => {
       '${FRIGATE_WEBRTC_PORT}:8555/tcp',
       '${FRIGATE_WEBRTC_PORT}:8555/udp',
     ]))
+  })
+})
+
+describe('Recipe registry — container hardening', () => {
+  it('does not apply blanket cap drops to elevated recipes', () => {
+    const elevatedRecipeIds = [
+      'gluetun',
+      'wireguard',
+      'frigate',
+      'homeassistant',
+      'plex',
+      'netdata',
+      'dockge',
+      'portainer',
+      'homepage',
+      'beszel',
+      'drone',
+      'fileflows',
+      'jellyfin',
+      'tdarr',
+      'npm',
+      'pihole',
+      'adguard',
+    ]
+
+    for (const recipeId of elevatedRecipeIds) {
+      const recipe = allRecipes.find(r => r.id === recipeId)
+      expect(recipe, `${recipeId} should exist`).toBeDefined()
+      expect(recipe?.composeService.cap_drop, `${recipeId} should not drop all capabilities`).not.toEqual(['ALL'])
+    }
+  })
+
+  it('keeps normal app recipes on the default no-new-privileges and cap-drop hardening profile', () => {
+    const normalRecipes = allRecipes.filter(recipe =>
+      !recipe.tags.includes('privileged') &&
+      !recipe.tags.includes('network-host') &&
+      !recipe.tags.includes('needs-gpu') &&
+      !recipe.composeService.cap_add &&
+      !recipe.composeService.privileged &&
+      !recipe.composeService.network_mode &&
+      !recipe.composeService.devices &&
+      !hasDockerSocket(recipe.id) &&
+      !hasLowHostPort(recipe.id)
+    )
+
+    expect(normalRecipes.length).toBeGreaterThan(0)
+    for (const recipe of normalRecipes) {
+      expect(recipe.composeService.security_opt, `${recipe.id} should use no-new-privileges`).toContain('no-new-privileges:true')
+      expect(recipe.composeService.cap_drop, `${recipe.id} should drop ambient capabilities`).toEqual(['ALL'])
+    }
   })
 })

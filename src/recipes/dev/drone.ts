@@ -74,7 +74,7 @@ export const drone: Recipe = {
     ],
     volumes: [
       '${DRONE_DATA}:/data',
-      '/var/run/docker.sock:/var/run/docker.sock',
+      '/var/run/docker.sock:/var/run/docker.sock:ro',
     ],
     ports: ['${DRONE_PORT}:80'],
   },

@@ -32,6 +32,8 @@ export const profilarr: Recipe = {
     environment: ['TZ=${TZ}'],
     volumes: ['${PROFILARR_DATA}:/config'],
     ports: ['${PROFILARR_PORT}:6868'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

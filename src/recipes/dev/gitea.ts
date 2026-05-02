@@ -67,6 +67,8 @@ export const gitea: Recipe = {
       '${GITEA_HTTP_PORT}:3000',
       '${GITEA_SSH_PORT}:22',
     ],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

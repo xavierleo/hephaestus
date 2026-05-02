@@ -63,6 +63,8 @@ export const emby: Recipe = {
       '${MEDIA_DIR}:/media:ro',
     ],
     ports: ['${EMBY_PORT}:8096'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [],

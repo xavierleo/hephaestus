@@ -72,6 +72,8 @@ export const sonarr: Recipe = {
       '${COMPLETE_DIR}:/downloads/complete',
     ],
     ports: ['${SONARR_PORT}:8989'],
+    security_opt: ['no-new-privileges:true'],
+    cap_drop: ['ALL'],
   },
 
   seedConfigs: [
