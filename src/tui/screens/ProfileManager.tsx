@@ -75,6 +75,10 @@ export function ProfileManager({ onDone }: Props) {
                 <Text dimColor>
                   {profile.defaultServices.length} services
                 </Text>
+                <Text dimColor>
+                  {'  '}
+                  NAS {profile.config.hasNas ? `enabled: ${profile.config.nasMountPath}` : 'disabled'}
+                </Text>
               </Box>
             )
           })}

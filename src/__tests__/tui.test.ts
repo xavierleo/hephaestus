@@ -21,3 +21,17 @@ describe('TUI defaults', () => {
     expect(configSource).not.toContain("stacksDir: config.stacksDir ?? '/opt/stacks'")
   })
 })
+
+describe('profile summaries', () => {
+  it('show whether NAS is enabled and which path it uses', () => {
+    const welcomeSource = readFileSync('src/tui/screens/Welcome.tsx', 'utf-8')
+    const profileManagerSource = readFileSync('src/tui/screens/ProfileManager.tsx', 'utf-8')
+
+    expect(welcomeSource).toContain('NAS')
+    expect(welcomeSource).toContain('activeProfile.config.hasNas')
+    expect(welcomeSource).toContain('activeProfile.config.nasMountPath')
+    expect(profileManagerSource).toContain('NAS ')
+    expect(profileManagerSource).toContain('profile.config.hasNas')
+    expect(profileManagerSource).toContain('profile.config.nasMountPath')
+  })
+})

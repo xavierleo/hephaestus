@@ -209,6 +209,12 @@ export function Welcome({ preflight, activeProfile, onNext, onLoadProfile, onMan
           <Text dimColor>{DIVIDER}</Text>
           <CheckRow label="  Base dir" value={activeProfile.config.baseDir} />
           <CheckRow label="  Stacks dir" value={activeProfile.config.stacksDir} />
+          <CheckRow
+            label="  NAS"
+            value={activeProfile.config.hasNas
+              ? `enabled — ${activeProfile.config.nasMountPath}`
+              : 'disabled'}
+          />
           <CheckRow label="  Domain" value={activeProfile.config.domain || '(none)'} />
           <CheckRow label="  Services" value={
             activeProfile.defaultServices.length === 0

@@ -77,6 +77,7 @@ profileCmd
     console.log(`Created:  ${profile.createdAt}`)
     console.log(`Updated:  ${profile.updatedAt}`)
     console.log(`Services: ${profile.defaultServices.join(', ')}`)
+    console.log(`NAS:      ${profile.config.hasNas ? `enabled — ${profile.config.nasMountPath}` : 'disabled'}`)
     console.log('\nConfig:')
     for (const [k, v] of Object.entries(profile.config)) {
       console.log(`  ${k.padEnd(18)} ${v}`)
