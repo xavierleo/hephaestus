@@ -278,4 +278,19 @@ describe('mergeWithDetected', () => {
 
     expect(result.nasPass).toBeUndefined()
   })
+
+  it('derives mediaDir from nasMountPath when NAS is enabled in a loaded profile', () => {
+    const profile = makeProfile({
+      config: {
+        ...makeProfile().config,
+        hasNas: true,
+        nasMountPath: '/mnt/synology-media',
+        mediaDir: '/home/user/docker/media',
+      },
+    })
+
+    const result = mergeWithDetected(profile, { puid: 1001 })
+
+    expect(result.mediaDir).toBe('/mnt/synology-media/media')
+  })
 })

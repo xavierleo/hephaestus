@@ -129,6 +129,7 @@ export function mergeWithDetected(
   const puid = detected.puid ?? p.puid
   const dockerRootless = p.dockerRootless
   const stacksDir = normalizeStacksDir(p.stacksDir, p.baseDir)
+  const mediaDir = deriveMediaDir(p)
 
   return {
     // saved values win — user explicitly configured these
@@ -136,7 +137,7 @@ export function mergeWithDetected(
     stacksDir,
     domain:           p.domain,
     hostIp:           p.hostIp,
-    mediaDir:         p.mediaDir,
+    mediaDir,
     hasNas:           p.hasNas,
     nasMountPath:     p.nasMountPath,
     nasIp:            p.nasIp,
@@ -164,4 +165,11 @@ function normalizeStacksDir(stacksDir: string, baseDir: string): string {
   if (stacksDir !== LEGACY_DEFAULT_STACKS_DIR) return stacksDir
   const parent = path.dirname(baseDir || os.homedir())
   return path.join(parent, 'stacks')
+}
+
+function deriveMediaDir(config: ProfileConfig): string {
+  if (config.hasNas) {
+    return path.join(config.nasMountPath, 'media')
+  }
+  return config.mediaDir
 }
