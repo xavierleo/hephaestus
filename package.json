@@ -1,6 +1,6 @@
 {
   "name": "hephaestus",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "description": "Homelab stack scaffolder — Ninite for homelabs",
   "type": "module",
   "bin": {
