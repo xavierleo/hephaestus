@@ -215,6 +215,46 @@ describe('Scaffold: atomic write (integration)', () => {
     expect(existsSync(join(stackDir, 'SETUP.md'))).toBe(true)
   })
 
+  it('creates local docker-services folders referenced by generated app env files', async () => {
+    const config = makeTestConfig({
+      baseDir: tmpBase,
+      stacksDir: tmpStacks,
+      selectedServices: ['jellyfin', 'paperless', 'sabnzbd'],
+    })
+
+    await runScaffold(config, { dryRun: false })
+
+    expect(existsSync(join(tmpBase, 'jellyfin', 'config'))).toBe(true)
+    expect(existsSync(join(tmpBase, 'jellyfin', 'cache'))).toBe(true)
+    expect(existsSync(join(tmpBase, 'paperless', 'data'))).toBe(true)
+    expect(existsSync(join(tmpBase, 'paperless', 'media'))).toBe(true)
+    expect(existsSync(join(tmpBase, 'paperless', 'consume'))).toBe(true)
+    expect(existsSync(join(tmpBase, 'sabnzbd', 'config'))).toBe(true)
+    expect(existsSync(join(tmpBase, 'sabnzbd', 'incomplete'))).toBe(true)
+  })
+
+  it('does not create NAS media or download folders while preparing local app directories', async () => {
+    const nasRoot = join(tmpBase, '..', 'nas')
+    const config = makeTestConfig({
+      baseDir: tmpBase,
+      stacksDir: tmpStacks,
+      hasNas: true,
+      mediaDir: join(nasRoot, 'media'),
+      usenetDir: join(nasRoot, 'usenet'),
+      torrentsDir: join(nasRoot, 'torrents'),
+      selectedServices: ['jellyfin', 'sabnzbd', 'qbittorrent'],
+    })
+
+    await runScaffold(config, { dryRun: false })
+
+    expect(existsSync(join(tmpBase, 'jellyfin', 'config'))).toBe(true)
+    expect(existsSync(join(tmpBase, 'sabnzbd', 'config'))).toBe(true)
+    expect(existsSync(join(tmpBase, 'qbittorrent', 'config'))).toBe(true)
+    expect(existsSync(join(nasRoot, 'media'))).toBe(false)
+    expect(existsSync(join(nasRoot, 'usenet'))).toBe(false)
+    expect(existsSync(join(nasRoot, 'torrents'))).toBe(false)
+  })
+
   it('writes a parent compose.yml that includes every selected stack', async () => {
     const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin', 'bazarr'] })
     await runScaffold(config, { dryRun: false })

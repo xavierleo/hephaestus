@@ -187,6 +187,7 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
         atomicWrite(envPath, finalEnv)
         chmodSync(envPath, 0o600)
         atomicWrite(join(stackDir, '.gitignore'), '.env\n')
+        createLocalEnvDirectories(recipe.id, finalEnv, config)
       }
 
       // SETUP.md
@@ -216,6 +217,26 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
   }
 
   return { newEnvVars }
+}
+
+function createLocalEnvDirectories(recipeId: string, envContent: string, config: WizardConfig): void {
+  const envValues = parseEnvContent(envContent)
+  for (const [key, value] of envValues) {
+    if (!value || !isPathInside(value, config.baseDir)) continue
+    createDirectoryOrThrow(value, `${recipeId} ${key} directory`)
+  }
+}
+
+function parseEnvContent(content: string): Map<string, string> {
+  const result = new Map<string, string>()
+  for (const line of content.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq < 0) continue
+    result.set(trimmed.slice(0, eq), trimmed.slice(eq + 1))
+  }
+  return result
 }
 
 function findMigratableEnvDefaults(recipe: Recipe, config: WizardConfig): Map<string, Set<string>> {
