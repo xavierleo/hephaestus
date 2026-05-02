@@ -2,6 +2,8 @@ import { stringify } from 'yaml'
 import type { Recipe } from '../recipes/types.js'
 import type { WizardConfig } from '../types/config.js'
 
+const SHARED_NETWORK = 'cerebro-net'
+
 export interface ComposeFile {
   services: Record<string, object>
   networks?: Record<string, object>
@@ -17,15 +19,16 @@ export function renderCompose(recipes: Recipe[], config: WizardConfig): string {
 
   const composeFile: ComposeFile = { services }
 
-  // Add shared network if multiple services
-  if (recipes.length > 1) {
+  // Add the shared app network to every stack that can join Docker bridge networks.
+  // Host-network and container-network services cannot also declare networks.
+  if (Object.values(services).some(serviceCanJoinSharedNetwork)) {
     composeFile.networks = {
-      'cerebro-net': { external: true },
+      [SHARED_NETWORK]: { external: true },
     }
     for (const key of Object.keys(services)) {
       const svc = services[key] as Record<string, unknown>
-      if (!svc['network_mode']) {
-        svc['networks'] = ['cerebro-net']
+      if (serviceCanJoinSharedNetwork(svc)) {
+        svc['networks'] = uniqueNetworks([...(toStringArray(svc['networks']) ?? []), SHARED_NETWORK])
       }
     }
   }
@@ -35,6 +38,21 @@ export function renderCompose(recipes: Recipe[], config: WizardConfig): string {
     defaultKeyType: 'PLAIN',
     defaultStringType: 'QUOTE_DOUBLE',
   })
+}
+
+function serviceCanJoinSharedNetwork(service: object): boolean {
+  const svc = service as Record<string, unknown>
+  return typeof svc['network_mode'] !== 'string'
+}
+
+function toStringArray(value: unknown): string[] | undefined {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : undefined
+}
+
+function uniqueNetworks(networks: string[]): string[] {
+  return [...new Set(networks)]
 }
 
 function buildServiceDefinition(recipe: Recipe, config: WizardConfig): Record<string, unknown> {

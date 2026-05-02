@@ -60,6 +60,31 @@ describe('Scaffold: compose.yml YAML validity', () => {
     expect(Object.keys(doc.services)).toContain(recipe.composeService.container_name)
   })
 
+  it('attaches single-service app stacks to the shared external Docker network', () => {
+    const config = makeTestConfig({ selectedServices: ['jellyfin'] })
+    const recipe = allRecipes.find(r => r.id === 'jellyfin')!
+    const doc = parseYaml(renderCompose([recipe], config)) as {
+      services: Record<string, Record<string, unknown>>
+      networks?: Record<string, unknown>
+    }
+
+    expect(doc.networks).toEqual({ 'cerebro-net': { external: true } })
+    expect(doc.services.jellyfin?.networks).toEqual(['cerebro-net'])
+  })
+
+  it('does not attach host-network app stacks to Docker bridge networks', () => {
+    const config = makeTestConfig({ selectedServices: ['homeassistant'] })
+    const recipe = allRecipes.find(r => r.id === 'homeassistant')!
+    const doc = parseYaml(renderCompose([recipe], config)) as {
+      services: Record<string, Record<string, unknown>>
+      networks?: Record<string, unknown>
+    }
+
+    expect(doc.networks).toBeUndefined()
+    expect(doc.services.homeassistant?.network_mode).toBe('host')
+    expect(doc.services.homeassistant?.networks).toBeUndefined()
+  })
+
   it('renders download clients as standalone services unless Gluetun is selected', () => {
     const config = makeTestConfig({ selectedServices: ['sabnzbd'] })
     const recipe = allRecipes.find(r => r.id === 'sabnzbd')!
