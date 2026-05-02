@@ -43,7 +43,11 @@ function parseEnvFile(filePath: string): Map<string, string> {
 
 // Merge freshly generated .env content with existing values.
 // Existing non-empty values win so user edits are never clobbered on re-run.
-function mergeEnvContent(newContent: string, existing: Map<string, string>): string {
+function mergeEnvContent(
+  newContent: string,
+  existing: Map<string, string>,
+  migratableDefaults = new Map<string, Set<string>>(),
+): string {
   return newContent.split('\n').map(line => {
     const trimmed = line.trim()
     if (!trimmed || trimmed.startsWith('#')) return line
@@ -52,6 +56,7 @@ function mergeEnvContent(newContent: string, existing: Map<string, string>): str
     const key = trimmed.slice(0, eq)
     const existingVal = existing.get(key)
     if (existingVal !== undefined && existingVal !== '') {
+      if (migratableDefaults.get(key)?.has(existingVal)) return line
       return `${key}=${existingVal}`
     }
     return line
@@ -154,7 +159,8 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
         const envPath = join(stackDir, '.env')
         const existingEnv = parseEnvFile(envPath)
         const addedKeys = findNewEnvKeys(envContent, existingEnv)
-        const finalEnv = existingEnv.size > 0 ? mergeEnvContent(envContent, existingEnv) : envContent
+        const migratableDefaults = findMigratableEnvDefaults(recipe, config)
+        const finalEnv = existingEnv.size > 0 ? mergeEnvContent(envContent, existingEnv, migratableDefaults) : envContent
         if (addedKeys.length > 0) newEnvVars.set(recipe.id, addedKeys)
         atomicWrite(envPath, finalEnv)
         chmodSync(envPath, 0o600)
@@ -188,6 +194,39 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
   }
 
   return { newEnvVars }
+}
+
+function findMigratableEnvDefaults(recipe: Recipe, config: WizardConfig): Map<string, Set<string>> {
+  const result = new Map<string, Set<string>>()
+  const add = (key: string, value: string | undefined) => {
+    if (!value || value === getGeneratedEnvValue(recipe, config, key)) return
+    const values = result.get(key) ?? new Set<string>()
+    values.add(value)
+    result.set(key, values)
+  }
+
+  if (config.hasNas) {
+    add('MEDIA_DIR', join(config.baseDir, 'media'))
+  }
+
+  if (config.usenetDir || config.torrentsDir) {
+    add('COMPLETE_DIR', join(config.baseDir, 'media', 'downloads', 'complete'))
+    add('COMPLETE_DIR', join(config.mediaDir, 'downloads', 'complete'))
+  }
+
+  return result
+}
+
+function getGeneratedEnvValue(recipe: Recipe, config: WizardConfig, key: string): string | undefined {
+  if (key === 'MEDIA_DIR') return config.mediaDir
+  if (key === 'USENET_DIR') return config.usenetDir
+  if (key === 'TORRENTS_DIR') return config.torrentsDir
+
+  const envVar = recipe.envVars.find(candidate => candidate.key === key)
+  if (!envVar) return undefined
+  return typeof envVar.defaultValue === 'function'
+    ? envVar.defaultValue(config)
+    : envVar.defaultValue
 }
 
 export function createDirectoryOrThrow(path: string, label: string): void {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, existsSync, statSync, readdirSync } from 'fs'
+import { mkdtempSync, rmSync, existsSync, statSync, readdirSync, readFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { parse as parseYaml } from 'yaml'
@@ -190,6 +190,20 @@ describe('Scaffold: atomic write (integration)', () => {
     expect(existsSync(join(stackDir, 'SETUP.md'))).toBe(true)
   })
 
+  it('writes a parent compose.yml that includes every selected stack', async () => {
+    const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin', 'bazarr'] })
+    await runScaffold(config, { dryRun: false })
+
+    const rootCompose = join(tmpStacks, 'compose.yml')
+    expect(existsSync(rootCompose)).toBe(true)
+
+    const doc = parseYaml(readFileSync(rootCompose, 'utf-8')) as Record<string, unknown>
+    expect(doc.include).toEqual([
+      './jellyfin/compose.yml',
+      './bazarr/compose.yml',
+    ])
+  })
+
   it('.env file has mode 0o600 (owner-read/write only)', async () => {
     const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin'] })
     await runScaffold(config, { dryRun: false })
@@ -233,6 +247,49 @@ describe('Scaffold: atomic write (integration)', () => {
     await runScaffold(config, { dryRun: false })
     const afterRerun = readFileSync(envPath, 'utf-8')
     expect(afterRerun).toContain('JELLYFIN_PORT=9999')
+  })
+
+  it('updates stale generated media and download defaults when NAS folders change', async () => {
+    const config = makeTestConfig({
+      baseDir: tmpBase,
+      stacksDir: tmpStacks,
+      hasNas: true,
+      nasMountPath: '/mnt/synology-media',
+      mediaDir: '/mnt/synology-media/media',
+      usenetDir: '/mnt/synology-media/usenet',
+      torrentsDir: '/mnt/synology-media/torrents',
+      selectedServices: ['sabnzbd', 'qbittorrent'],
+    })
+
+    await runScaffold(config, { dryRun: false })
+
+    const { readFileSync, writeFileSync, chmodSync } = await import('fs')
+    const sabEnvPath = join(tmpStacks, 'sabnzbd', '.env')
+    const qbitEnvPath = join(tmpStacks, 'qbittorrent', '.env')
+
+    writeFileSync(
+      sabEnvPath,
+      readFileSync(sabEnvPath, 'utf-8')
+        .replaceAll('/mnt/synology-media/media', `${tmpBase}/media`)
+        .replace('COMPLETE_DIR=/mnt/synology-media/usenet', `COMPLETE_DIR=${tmpBase}/media/downloads/complete`),
+      'utf-8',
+    )
+    writeFileSync(
+      qbitEnvPath,
+      readFileSync(qbitEnvPath, 'utf-8')
+        .replaceAll('/mnt/synology-media/media', `${tmpBase}/media`)
+        .replace('COMPLETE_DIR=/mnt/synology-media/torrents', `COMPLETE_DIR=${tmpBase}/media/downloads/complete`),
+      'utf-8',
+    )
+    chmodSync(sabEnvPath, 0o600)
+    chmodSync(qbitEnvPath, 0o600)
+
+    await runScaffold(config, { dryRun: false })
+
+    expect(readFileSync(sabEnvPath, 'utf-8')).toContain('MEDIA_DIR=/mnt/synology-media/media')
+    expect(readFileSync(sabEnvPath, 'utf-8')).toContain('COMPLETE_DIR=/mnt/synology-media/usenet')
+    expect(readFileSync(qbitEnvPath, 'utf-8')).toContain('MEDIA_DIR=/mnt/synology-media/media')
+    expect(readFileSync(qbitEnvPath, 'utf-8')).toContain('COMPLETE_DIR=/mnt/synology-media/torrents')
   })
 })
 
