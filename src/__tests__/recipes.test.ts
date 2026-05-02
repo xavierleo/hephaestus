@@ -136,6 +136,15 @@ describe('Recipe registry — Frigate', () => {
   })
 })
 
+describe('Recipe registry — deprecated upstream images', () => {
+  it('pins Readarr to an amd64 image tag because upstream branch manifests are deprecated', () => {
+    const readarr = allRecipes.find(r => r.id === 'readarr')
+
+    expect(readarr?.composeService.image).toBe('ghcr.io/linuxserver/readarr:amd64-develop')
+    expect(readarr?.composeService.image).not.toBe('lscr.io/linuxserver/readarr:develop')
+  })
+})
+
 describe('Recipe registry — container hardening', () => {
   it('does not apply blanket cap drops to elevated recipes', () => {
     const elevatedRecipeIds = [

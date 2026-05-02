@@ -61,7 +61,7 @@ export const readarr: Recipe = {
   ],
 
   composeService: {
-    image: 'lscr.io/linuxserver/readarr:develop',
+    image: 'ghcr.io/linuxserver/readarr:amd64-develop',
     container_name: 'readarr',
     restart: 'unless-stopped',
     environment: ['PUID=${PUID}', 'PGID=${PGID}', 'TZ=${TZ}'],
