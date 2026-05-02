@@ -6,7 +6,7 @@ export const transmission: Recipe = {
   description: 'Torrent client (alternative to qBittorrent)',
   category: 'download',
   port: 9091,
-  tags: ['needs-gluetun'],
+  tags: [],
 
   envVars: [
     {
@@ -66,6 +66,6 @@ export const transmission: Recipe = {
   },
 
   seedConfigs: [],
-  dependsOn: ['gluetun'],
+  dependsOn: [],
   postInstall: [],
 }

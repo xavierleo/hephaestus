@@ -24,7 +24,9 @@ export function renderCompose(recipes: Recipe[], config: WizardConfig): string {
     }
     for (const key of Object.keys(services)) {
       const svc = services[key] as Record<string, unknown>
-      svc['networks'] = ['cerebro-net']
+      if (!svc['network_mode']) {
+        svc['networks'] = ['cerebro-net']
+      }
     }
   }
 
@@ -45,6 +47,13 @@ function buildServiceDefinition(recipe: Recipe, config: WizardConfig): Record<st
     svc['volumes'] = (svc['volumes'] as string[]).map(v => substituteEnvVars(v, recipe, config))
   }
 
+  if (shouldRouteThroughGluetun(recipe, config)) {
+    svc['network_mode'] = 'container:gluetun'
+    delete svc['ports']
+  } else if (svc['network_mode'] === 'service:gluetun' || svc['network_mode'] === 'container:gluetun') {
+    delete svc['network_mode']
+  }
+
   // Apply GPU group_add if recipe needs GPU and config has GPU
   if (recipe.tags.includes('needs-gpu') && config.hasGpu) {
     svc['group_add'] = [String(config.renderGid)]
@@ -55,6 +64,12 @@ function buildServiceDefinition(recipe: Recipe, config: WizardConfig): Record<st
   }
 
   return svc
+}
+
+function shouldRouteThroughGluetun(recipe: Recipe, config: WizardConfig): boolean {
+  return recipe.category === 'download' &&
+    recipe.id !== 'gluetun' &&
+    config.selectedServices.includes('gluetun')
 }
 
 function substituteEnvVars(value: string, recipe: Recipe, config: WizardConfig): string {

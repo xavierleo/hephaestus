@@ -73,7 +73,7 @@ The active profile is shown on the Welcome screen and can be loaded with one key
 | Category | Services |
 |---|---|
 | Infra | Dockge, Portainer, Nginx Proxy Manager, Beszel |
-| Media | Jellyfin, Plex, Emby, Overseerr |
+| Media | Jellyfin, Plex, Emby, Seerr |
 | Download | Gluetun, SABnzbd, qBittorrent, NZBGet, Transmission |
 | Arr | Prowlarr, Sonarr, Radarr, Lidarr, Readarr, Bazarr, Whisparr |
 | Management | FileFlows, Huntarr, Profilarr, Tdarr |

@@ -57,6 +57,42 @@ describe('Scaffold: compose.yml YAML validity', () => {
     const doc = parseYaml(renderCompose([recipe], config)) as Record<string, Record<string, unknown>>
     expect(Object.keys(doc.services)).toContain(recipe.composeService.container_name)
   })
+
+  it('renders download clients as standalone services unless Gluetun is selected', () => {
+    const config = makeTestConfig({ selectedServices: ['sabnzbd'] })
+    const recipe = allRecipes.find(r => r.id === 'sabnzbd')!
+    const doc = parseYaml(renderCompose([recipe], config)) as Record<string, Record<string, Record<string, unknown>>>
+    const service = doc.services.sabnzbd
+
+    expect(service.network_mode).toBeUndefined()
+    expect(service.ports).toEqual(['8080:8080'])
+  })
+
+  it('routes download clients through the Gluetun container when Gluetun is selected', () => {
+    const config = makeTestConfig({ selectedServices: ['gluetun', 'sabnzbd'] })
+    const recipe = allRecipes.find(r => r.id === 'sabnzbd')!
+    const doc = parseYaml(renderCompose([recipe], config)) as Record<string, Record<string, Record<string, unknown>>>
+    const service = doc.services.sabnzbd
+
+    expect(service.network_mode).toBe('container:gluetun')
+    expect(service.ports).toBeUndefined()
+  })
+
+  it('applies optional Gluetun routing to every non-Gluetun download client', () => {
+    const downloadClients = allRecipes.filter(r => r.category === 'download' && r.id !== 'gluetun')
+
+    for (const recipe of downloadClients) {
+      const standaloneConfig = makeTestConfig({ selectedServices: [recipe.id] })
+      const standalone = parseYaml(renderCompose([recipe], standaloneConfig)) as Record<string, Record<string, Record<string, unknown>>>
+      expect(standalone.services[recipe.composeService.container_name]?.network_mode).toBeUndefined()
+
+      const vpnConfig = makeTestConfig({ selectedServices: ['gluetun', recipe.id] })
+      const vpnRouted = parseYaml(renderCompose([recipe], vpnConfig)) as Record<string, Record<string, Record<string, unknown>>>
+      const service = vpnRouted.services[recipe.composeService.container_name]
+      expect(service?.network_mode, `${recipe.id} should route through Gluetun when selected`).toBe('container:gluetun')
+      expect(service?.ports, `${recipe.id} should expose UI through Gluetun when selected`).toBeUndefined()
+    }
+  })
 })
 
 describe('Scaffold: .env format', () => {

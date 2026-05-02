@@ -6,7 +6,7 @@ export const nzbget: Recipe = {
   description: 'Usenet downloader (alternative to SABnzbd)',
   category: 'download',
   port: 6789,
-  tags: ['needs-gluetun'],
+  tags: [],
 
   envVars: [
     {
@@ -66,6 +66,6 @@ export const nzbget: Recipe = {
   },
 
   seedConfigs: [],
-  dependsOn: ['gluetun'],
+  dependsOn: [],
   postInstall: [],
 }

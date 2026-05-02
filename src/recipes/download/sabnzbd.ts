@@ -4,10 +4,10 @@ import { generateSabnzbdIni } from '../../scaffold/seed/sabnzbd-ini.js'
 export const sabnzbd: Recipe = {
   id: 'sabnzbd',
   name: 'SABnzbd',
-  description: 'Usenet downloader (via Gluetun)',
+  description: 'Usenet downloader',
   category: 'download',
   port: 8080,
-  tags: ['needs-gluetun', 'needs-nas'],
+  tags: ['needs-nas'],
 
   envVars: [
     {
@@ -58,14 +58,13 @@ export const sabnzbd: Recipe = {
     image: 'lscr.io/linuxserver/sabnzbd:latest',
     container_name: 'sabnzbd',
     restart: 'unless-stopped',
-    // Runs inside Gluetun network — no direct port mapping
-    network_mode: 'service:gluetun',
     environment: ['PUID=${PUID}', 'PGID=${PGID}', 'TZ=${TZ}'],
     volumes: [
       '${SABNZBD_DATA}:/config',
       '${COMPLETE_DIR}:/downloads/complete',
       '${INCOMPLETE_DIR}:/downloads/incomplete',
     ],
+    ports: ['8080:8080'],
   },
 
   seedConfigs: [
@@ -74,6 +73,6 @@ export const sabnzbd: Recipe = {
       generate: ctx => generateSabnzbdIni(ctx.config, ctx.apiKey),
     },
   ],
-  dependsOn: ['gluetun'],
+  dependsOn: [],
   postInstall: [],
 }

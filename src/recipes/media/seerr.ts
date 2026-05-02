@@ -2,7 +2,7 @@ import type { Recipe } from '../types.js'
 
 export const seerr: Recipe = {
   id: 'seerr',
-  name: 'Jellyseerr',
+  name: 'Seerr',
   description: 'Media request management',
   category: 'media',
   port: 5055,
@@ -26,7 +26,7 @@ export const seerr: Recipe = {
   ],
 
   composeService: {
-    image: 'fallenbagel/jellyseerr:latest',
+    image: 'ghcr.io/seerr-team/seerr:latest',
     container_name: 'seerr',
     restart: 'unless-stopped',
     environment: ['LOG_LEVEL=debug', 'TZ=${TZ}'],

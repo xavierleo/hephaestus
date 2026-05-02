@@ -71,6 +71,8 @@ export const gluetun: Recipe = {
     ports: [
       '8080:8080',   // SABnzbd
       '8388:8388',   // qBittorrent
+      '6789:6789',   // NZBGet
+      '9091:9091',   // Transmission
     ],
   },
 

@@ -2,7 +2,7 @@ import type { Recipe } from '../../recipes/types.js'
 
 export const MUTEX_GROUPS: Record<string, string[]> = {
   MEDIA_SERVER:    ['jellyfin', 'plex', 'emby'],
-  REQUEST_MANAGER: ['seerr', 'jellyseerr'],
+  REQUEST_MANAGER: ['seerr'],
   REVERSE_PROXY:   ['npm', 'traefik', 'caddy'],
   STACK_MANAGER:   ['dockge', 'portainer'],
   USENET_CLIENT:   ['sabnzbd', 'nzbget'],

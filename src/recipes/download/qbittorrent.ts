@@ -3,10 +3,10 @@ import type { Recipe } from '../types.js'
 export const qbittorrent: Recipe = {
   id: 'qbittorrent',
   name: 'qBittorrent',
-  description: 'Torrent client (via Gluetun)',
+  description: 'Torrent client',
   category: 'download',
   port: 8388,
-  tags: ['needs-gluetun', 'needs-nas'],
+  tags: ['needs-nas'],
 
   envVars: [
     {
@@ -50,7 +50,6 @@ export const qbittorrent: Recipe = {
     image: 'lscr.io/linuxserver/qbittorrent:latest',
     container_name: 'qbittorrent',
     restart: 'unless-stopped',
-    network_mode: 'service:gluetun',
     environment: [
       'PUID=${PUID}',
       'PGID=${PGID}',
@@ -61,9 +60,10 @@ export const qbittorrent: Recipe = {
       '${QBIT_DATA}:/config',
       '${COMPLETE_DIR}:/downloads/complete',
     ],
+    ports: ['8388:8388'],
   },
 
   seedConfigs: [],
-  dependsOn: ['gluetun'],
+  dependsOn: [],
   postInstall: [],
 }
