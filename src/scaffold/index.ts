@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync, chmodSync, renameSync, readFileSync, existsSync } from 'fs'
 import { isAbsolute, join, relative, resolve } from 'path'
-import { parse as parseYaml } from 'yaml'
+import { parse as parseYaml, stringify } from 'yaml'
 import type { WizardConfig } from '../types/config.js'
 import { recipeMap } from '../recipes/registry.js'
 import type { Recipe, SeedContext } from '../recipes/types.js'
@@ -76,6 +76,12 @@ function findNewEnvKeys(newContent: string, existing: Map<string, string>): stri
   return added
 }
 
+function renderParentCompose(recipes: Recipe[]): string {
+  return stringify({
+    include: recipes.map(recipe => `./${recipe.id}/compose.yml`),
+  })
+}
+
 export async function runScaffold(config: WizardConfig, options: ScaffoldOptions): Promise<ScaffoldResult> {
   const { dryRun, onProgress } = options
   const report = (label: string, status: 'running' | 'done' | 'error', detail?: string) =>
@@ -105,6 +111,22 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
     atomicWrite(join(config.stacksDir, '_global.env'), renderGlobalEnv(config))
   }
   report('Writing _global.env', 'done')
+
+  // Parent compose file lets `docker compose up -d` work from the stacks directory.
+  report('Writing parent compose.yml', 'running')
+  if (!dryRun) {
+    const composeYml = renderParentCompose(selectedRecipes)
+    try {
+      parseYaml(composeYml)
+    } catch (yamlErr) {
+      throw new Error(
+        `Generated parent compose.yml is not valid YAML — this is a bug in Hephaestus. ` +
+        `Please report it. Error: ${yamlErr instanceof Error ? yamlErr.message : String(yamlErr)}`,
+      )
+    }
+    atomicWrite(join(config.stacksDir, 'compose.yml'), composeYml)
+  }
+  report('Writing parent compose.yml', 'done')
 
   // 4 — Pre-generate one API key per recipe that has seed configs.
   //     If a seed config already exists on disk, read its embedded key so
