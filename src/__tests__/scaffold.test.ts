@@ -93,6 +93,17 @@ describe('Scaffold: compose.yml YAML validity', () => {
       expect(service?.ports, `${recipe.id} should expose UI through Gluetun when selected`).toBeUndefined()
     }
   })
+
+  it('mounts the whole /dev/dri directory for Jellyfin GPU access', () => {
+    const config = makeTestConfig({ hasGpu: true, selectedServices: ['jellyfin'] })
+    const recipe = allRecipes.find(r => r.id === 'jellyfin')!
+    const doc = parseYaml(renderCompose([recipe], config)) as Record<string, Record<string, Record<string, unknown>>>
+    const service = doc.services.jellyfin
+
+    expect(service.devices).toEqual(['/dev/dri:/dev/dri'])
+    expect(service.devices).not.toContain('/dev/dri/renderD128:/dev/dri/renderD128')
+    expect(service.devices).not.toContain('/dev/dri/card1:/dev/dri/card1')
+  })
 })
 
 describe('Scaffold: .env format', () => {

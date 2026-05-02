@@ -57,10 +57,7 @@ export const jellyfin: Recipe = {
       '${MEDIA_DIR}:/media:ro',
     ],
     ports: ['${JELLYFIN_PORT}:8096'],
-    devices: [
-      '/dev/dri/renderD128:/dev/dri/renderD128',
-      '/dev/dri/card1:/dev/dri/card1',
-    ],
+    devices: ['/dev/dri:/dev/dri'],
     group_add: ['${RENDER_GID}'],
   },
 

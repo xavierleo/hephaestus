@@ -57,10 +57,7 @@ function buildServiceDefinition(recipe: Recipe, config: WizardConfig): Record<st
   // Apply GPU group_add if recipe needs GPU and config has GPU
   if (recipe.tags.includes('needs-gpu') && config.hasGpu) {
     svc['group_add'] = [String(config.renderGid)]
-    svc['devices'] = [
-      `${config.gpuRender}:${config.gpuRender}`,
-      `${config.gpuCard}:${config.gpuCard}`,
-    ]
+    svc['devices'] = ['/dev/dri:/dev/dri']
   }
 
   return svc
