@@ -17,7 +17,7 @@ export function Done({ config, preflight }: DoneProps) {
     <Box flexDirection="column" padding={1}>
       <Text color="green" bold>✓ Scaffold complete!</Text>
       <Text dimColor>Your stacks are in {config.stacksDir}.</Text>
-      <Text dimColor>Next: cd {config.stacksDir} && docker compose up -d</Text>
+      <Text dimColor>Next: cd {config.stacksDir} && ./up-all.sh</Text>
 
       {needsTailscale && (
         <Box flexDirection="column" marginTop={1}>

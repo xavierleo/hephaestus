@@ -1,6 +1,6 @@
-import { mkdirSync, writeFileSync, chmodSync, renameSync, readFileSync, existsSync } from 'fs'
+import { mkdirSync, writeFileSync, chmodSync, renameSync, readFileSync, existsSync, rmSync } from 'fs'
 import { isAbsolute, join, relative, resolve } from 'path'
-import { parse as parseYaml, stringify } from 'yaml'
+import { parse as parseYaml } from 'yaml'
 import type { WizardConfig } from '../types/config.js'
 import { recipeMap } from '../recipes/registry.js'
 import type { Recipe, SeedContext } from '../recipes/types.js'
@@ -80,10 +80,21 @@ function findNewEnvKeys(newContent: string, existing: Map<string, string>): stri
   return added
 }
 
-function renderParentCompose(recipes: Recipe[]): string {
-  return stringify({
-    include: recipes.map(recipe => `./${recipe.id}/compose.yml`),
-  })
+function renderUpAllScript(recipes: Recipe[]): string {
+  const lines = [
+    '#!/usr/bin/env bash',
+    'set -euo pipefail',
+    '',
+    'cd "$(dirname "${BASH_SOURCE[0]}")"',
+    '',
+  ]
+
+  for (const recipe of recipes) {
+    lines.push(`echo "Starting ${recipe.id}..."`)
+    lines.push(`(cd "${recipe.id}" && docker compose up -d)`)
+  }
+
+  return `${lines.join('\n')}\n`
 }
 
 export async function runScaffold(config: WizardConfig, options: ScaffoldOptions): Promise<ScaffoldResult> {
@@ -129,21 +140,17 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
   }
   report('Writing _global.env', 'done')
 
-  // Parent compose file lets `docker compose up -d` work from the stacks directory.
-  report('Writing parent compose.yml', 'running')
+  // Start each stack from its own directory so Dockge can manage them as separate stacks.
+  report('Writing up-all.sh', 'running')
   if (!dryRun) {
-    const composeYml = renderParentCompose(selectedRecipes)
-    try {
-      parseYaml(composeYml)
-    } catch (yamlErr) {
-      throw new Error(
-        `Generated parent compose.yml is not valid YAML — this is a bug in Hephaestus. ` +
-        `Please report it. Error: ${yamlErr instanceof Error ? yamlErr.message : String(yamlErr)}`,
-      )
-    }
-    atomicWrite(join(config.stacksDir, 'compose.yml'), composeYml)
+    const oldParentCompose = join(config.stacksDir, 'compose.yml')
+    if (existsSync(oldParentCompose)) rmSync(oldParentCompose)
+
+    const upAllPath = join(config.stacksDir, 'up-all.sh')
+    atomicWrite(upAllPath, renderUpAllScript(selectedRecipes))
+    chmodSync(upAllPath, 0o755)
   }
-  report('Writing parent compose.yml', 'done')
+  report('Writing up-all.sh', 'done')
 
   // 4 — Pre-generate one API key per recipe that has seed configs.
   //     If a seed config already exists on disk, read its embedded key so

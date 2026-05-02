@@ -2,7 +2,7 @@
 
 **Homelab stack scaffolder — Ninite for homelabs.**
 
-Hephaestus is an interactive terminal wizard that generates production-ready Docker Compose stacks for your homelab. It auto-detects your system, lets you pick services, and writes `compose.yml` + `.env` files with services already wired together — Sonarr knows where SABnzbd is, Prowlarr is already connected to every arr app, Bazarr is linked to Sonarr and Radarr. Everything is configured before the first `docker compose up -d`.
+Hephaestus is an interactive terminal wizard that generates production-ready Docker Compose stacks for your homelab. It auto-detects your system, lets you pick services, and writes `compose.yml` + `.env` files with services already wired together — Sonarr knows where SABnzbd is, Prowlarr is already connected to every arr app, Bazarr is linked to Sonarr and Radarr. Everything is configured before the first `./up-all.sh`.
 
 > **Linux only.** Requires Docker with the Compose V2 plugin.
 

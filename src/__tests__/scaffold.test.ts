@@ -284,18 +284,19 @@ describe('Scaffold: atomic write (integration)', () => {
     expect(existsSync(join(nasRoot, 'torrents'))).toBe(false)
   })
 
-  it('writes a parent compose.yml that includes every selected stack', async () => {
+  it('writes an up-all helper that starts every selected stack from its own directory', async () => {
     const config = makeTestConfig({ baseDir: tmpBase, stacksDir: tmpStacks, selectedServices: ['jellyfin', 'bazarr'] })
     await runTestScaffold(config, { dryRun: false })
 
-    const rootCompose = join(tmpStacks, 'compose.yml')
-    expect(existsSync(rootCompose)).toBe(true)
+    const upAll = join(tmpStacks, 'up-all.sh')
+    expect(existsSync(upAll)).toBe(true)
+    expect(statSync(upAll).mode & 0o777).toBe(0o755)
 
-    const doc = parseYaml(readFileSync(rootCompose, 'utf-8')) as Record<string, unknown>
-    expect(doc.include).toEqual([
-      './jellyfin/compose.yml',
-      './bazarr/compose.yml',
-    ])
+    const script = readFileSync(upAll, 'utf-8')
+    expect(script).toContain('cd "jellyfin"')
+    expect(script).toContain('cd "bazarr"')
+    expect(script).toContain('docker compose up -d')
+    expect(existsSync(join(tmpStacks, 'compose.yml'))).toBe(false)
   })
 
   it('.env file has mode 0o600 (owner-read/write only)', async () => {
@@ -420,7 +421,10 @@ describe('Scaffold: atomic write (integration)', () => {
     })
 
     await runScaffold(config, { dryRun: false, ensureNetwork: async () => undefined })
-    await expect(execa('docker', ['compose', '-f', join(tmpStacks, 'compose.yml'), 'config'])).resolves.toBeDefined()
+
+    for (const serviceId of config.selectedServices) {
+      await expect(execa('docker', ['compose', '-f', join(tmpStacks, serviceId, 'compose.yml'), 'config'])).resolves.toBeDefined()
+    }
   })
 })
 
