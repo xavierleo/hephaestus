@@ -1,6 +1,8 @@
 import { execa } from 'execa'
 import { appendFileSync, chmodSync, mkdirSync, writeFileSync } from 'fs'
 import { dirname, join } from 'path'
+import type { MountInfo } from './mounts.js'
+import { findMountAtPath, readCurrentMounts } from './mounts.js'
 
 export interface NasConfig {
   nasIp: string
@@ -25,7 +27,13 @@ export function renderFstabEntry(config: NasConfig, credentialsPath: string): st
     `file_mode=0775,dir_mode=0775,noperm 0 0\n`
 }
 
+export function shouldMountNas(mountPath: string, mounts: readonly MountInfo[] = readCurrentMounts()): boolean {
+  return findMountAtPath(mounts, mountPath) === undefined
+}
+
 export async function mountNas(config: NasConfig): Promise<void> {
+  if (!shouldMountNas(config.mountPath)) return
+
   mkdirSync(config.mountPath, { recursive: true })
   const credentialsPath = credentialsPathForMount(config.mountPath)
   mkdirSync(dirname(credentialsPath), { recursive: true })

@@ -4,7 +4,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { renderEnv, renderGlobalEnv } from '../scaffold/env.js'
 import { runScaffold } from '../scaffold/index.js'
-import { renderCifsCredentials, renderFstabEntry, credentialsPathForMount } from '../system/nas.js'
+import { renderCifsCredentials, renderFstabEntry, credentialsPathForMount, shouldMountNas } from '../system/nas.js'
 import type { WizardConfig } from '../types/config.js'
 
 function makeConfig(overrides: Partial<WizardConfig> = {}): WizardConfig {
@@ -47,6 +47,15 @@ describe('NAS credential hardening', () => {
     expect(fstab).toContain(`credentials=${credentialsPath}`)
     expect(fstab).not.toContain('super-secret')
     expect(fstab).not.toContain('username=nas-user')
+  })
+
+  it('skips NAS mount setup when the requested mount path is already mounted', () => {
+    expect(shouldMountNas('/mnt/nas', [
+      { source: '//nas/media', mountPoint: '/mnt/nas', fsType: 'cifs' },
+    ])).toBe(false)
+    expect(shouldMountNas('/mnt/other', [
+      { source: '//nas/media', mountPoint: '/mnt/nas', fsType: 'cifs' },
+    ])).toBe(true)
   })
 })
 

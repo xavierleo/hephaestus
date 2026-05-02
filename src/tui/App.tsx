@@ -162,6 +162,7 @@ export function App({ flags }: AppProps) {
     return (
       <Config
         config={config}
+        mounts={preflight?.mounts ?? []}
         onNext={updates => advance(updates)}
         onBack={goBack}
       />

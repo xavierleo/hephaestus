@@ -1,9 +1,12 @@
 import React, { useState } from 'react'
 import { Box, Text, useInput } from 'ink'
 import type { WizardConfig } from '../../types/config.js'
+import type { MountInfo } from '../../system/mounts.js'
+import { describeMountPath } from '../../system/mounts.js'
 
 interface Props {
   config: Partial<WizardConfig>
+  mounts?: MountInfo[]
   onNext: (updates: Partial<WizardConfig>) => void
   onBack: () => void
 }
@@ -144,7 +147,7 @@ function getError(field: FieldDef, fields: FieldValues): string | null {
   return field.validate ? field.validate(fields[field.key], fields) : null
 }
 
-export function Config({ config, onNext, onBack }: Props) {
+export function Config({ config, mounts = [], onNext, onBack }: Props) {
   const [fields, setFields] = useState<FieldValues>(configToFields(config))
   const [activeIdx, setActiveIdx] = useState(0)
   const [showErrors, setShowErrors] = useState(false)
@@ -221,6 +224,9 @@ export function Config({ config, onNext, onBack }: Props) {
         const value = fields[field.key]
         const display = field.secret && value ? '•'.repeat(value.length) : value
         const error = showErrors || isActive ? errors[field.key] : null
+        const mountStatus = field.key === 'nasMountPath'
+          ? describeMountPath(value, mounts)
+          : null
 
         if (field.boolean) {
           const isTrue = value === 'true'
@@ -245,6 +251,11 @@ export function Config({ config, onNext, onBack }: Props) {
               {isActive && <Text color="cyan">█</Text>}
             </Box>
             {isActive && field.hint && <Text dimColor>({field.hint})</Text>}
+            {isActive && mountStatus && !error && (
+              <Text color={mountStatus.kind === 'mounted' ? 'green' : 'yellow'}>
+                {mountStatus.message}
+              </Text>
+            )}
             {error && <Text color="red">⚠ {error}</Text>}
           </Box>
         )

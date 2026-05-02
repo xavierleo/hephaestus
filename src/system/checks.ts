@@ -1,5 +1,7 @@
 import { execa } from 'execa'
 import { existsSync, readdirSync, readFileSync } from 'fs'
+import type { MountInfo } from './mounts.js'
+import { readCurrentMounts } from './mounts.js'
 
 export interface OsInfo {
   name: string
@@ -46,6 +48,7 @@ export interface PreflightResult {
   tailscale: TailscaleInfo
   gpu: GpuInfo
   cifsUtils: CifsInfo
+  mounts: MountInfo[]
   portConflicts: PortConflict[]
   portScanAvailable: boolean   // false if both ss and netstat are missing
   existingStacks: string[]
@@ -71,6 +74,7 @@ export async function runPreflightChecks(stacksDir: string): Promise<PreflightRe
   ])
 
   const existingStacks = detectExistingStacks(stacksDir)
+  const mounts = readCurrentMounts()
 
   return {
     os: osInfo,
@@ -78,6 +82,7 @@ export async function runPreflightChecks(stacksDir: string): Promise<PreflightRe
     tailscale,
     gpu,
     cifsUtils,
+    mounts,
     portConflicts: portResult.conflicts,
     portScanAvailable: portResult.available,
     existingStacks,

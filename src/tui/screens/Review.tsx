@@ -4,6 +4,7 @@ import type { WizardConfig, AppFlags } from '../../types/config.js'
 import type { PreflightResult } from '../../system/checks.js'
 import { recipeMap } from '../../recipes/registry.js'
 import { findPortConflicts, findMutexViolations, findDepWarnings, findRecipeRiskWarnings } from '../utils/review-checks.js'
+import { findMountAtPath } from '../../system/mounts.js'
 
 interface Props {
   config: WizardConfig
@@ -37,6 +38,7 @@ export function Review({ config, preflight, flags, profileRecipeVersions, onNext
 
   const dockerInstalled = preflight.docker.ok
   const needsNas = config.hasNas
+  const existingNasMount = needsNas ? findMountAtPath(preflight.mounts, config.nasMountPath) : undefined
   const needsGpu = config.hasGpu
   const needsNpm = config.selectedServices.includes('npm')
   const needsRootlessPorts = config.dockerRootless && needsNpm
@@ -153,8 +155,10 @@ export function Review({ config, preflight, flags, profileRecipeVersions, onNext
         )}
         {needsNas && (
           <ActionRow
-            done={false}
-            label={`NAS: ${config.nasMountPath} fstab entry + mount`}
+            done={existingNasMount !== undefined}
+            label={existingNasMount
+              ? `NAS: ${config.nasMountPath} already mounted (${existingNasMount.fsType}) — skipping mount setup`
+              : `NAS: ${config.nasMountPath} fstab entry + mount`}
           />
         )}
         {needsRootlessPorts && (
