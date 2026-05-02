@@ -26,7 +26,7 @@ export const SCREEN_ORDER: WizardScreen[] = [
 export interface WizardConfig {
   // System
   baseDir: string        // /home/xavier/docker-services
-  stacksDir: string      // /opt/stacks
+  stacksDir: string      // /home/xavier/stacks
   puid: number           // 1000
   pgid: number           // 1000
   tz: string             // Africa/Johannesburg

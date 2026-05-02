@@ -5,7 +5,7 @@ import { join } from 'path'
 import { parse as parseYaml } from 'yaml'
 import { renderCompose } from '../scaffold/compose.js'
 import { renderEnv, renderGlobalEnv } from '../scaffold/env.js'
-import { runScaffold } from '../scaffold/index.js'
+import { createDirectoryOrThrow, runScaffold } from '../scaffold/index.js'
 import { allRecipes } from '../recipes/registry.js'
 import type { WizardConfig } from '../types/config.js'
 
@@ -215,5 +215,13 @@ describe('Scaffold: atomic write (integration)', () => {
     await runScaffold(config, { dryRun: false })
     const afterRerun = readFileSync(envPath, 'utf-8')
     expect(afterRerun).toContain('JELLYFIN_PORT=9999')
+  })
+})
+
+describe('Scaffold: directory errors', () => {
+  it('names the exact directory that could not be created', () => {
+    expect(() => createDirectoryOrThrow('/dev/null/stacks', 'stacks directory')).toThrow(
+      /Could not create stacks directory at \/dev\/null\/stacks:/,
+    )
   })
 })

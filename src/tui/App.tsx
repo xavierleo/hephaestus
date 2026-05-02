@@ -23,6 +23,8 @@ interface AppProps {
   flags: AppFlags
 }
 
+const defaultHomeDir = `/home/${process.env['USER'] ?? 'user'}`
+
 export function App({ flags }: AppProps) {
   const { exit } = useApp()
   const [screen, setScreen] = useState<WizardScreen>('LOADING')
@@ -31,8 +33,8 @@ export function App({ flags }: AppProps) {
   const [loadedProfileName, setLoadedProfileName] = useState<string | null>(null)
   const [config, setConfig] = useState<Partial<WizardConfig>>({
     selectedServices: [],
-    baseDir: `/home/${process.env['USER'] ?? 'user'}/docker-services`,
-    stacksDir: '/opt/stacks',
+    baseDir: `${defaultHomeDir}/docker-services`,
+    stacksDir: `${defaultHomeDir}/stacks`,
     mediaDir: '/mnt/synology-media/media',
     nasMountPath: '/mnt/synology-media',
     hasNas: false,
@@ -40,7 +42,7 @@ export function App({ flags }: AppProps) {
   })
 
   useEffect(() => {
-    const stacksDir = config.stacksDir ?? '/opt/stacks'
+    const stacksDir = config.stacksDir ?? `${defaultHomeDir}/stacks`
     setActiveProfileState(getActiveProfile())
 
     runPreflightChecks(stacksDir).then(result => {

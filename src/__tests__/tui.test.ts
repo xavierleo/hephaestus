@@ -9,3 +9,15 @@ describe('TUI completion screen', () => {
     expect(appSource).toContain('Press q to exit')
   })
 })
+
+describe('TUI defaults', () => {
+  it('uses a user-writable stacks directory by default', () => {
+    const appSource = readFileSync('src/tui/App.tsx', 'utf-8')
+    const configSource = readFileSync('src/tui/screens/Config.tsx', 'utf-8')
+
+    expect(appSource).toContain('stacksDir: `${defaultHomeDir}/stacks`')
+    expect(configSource).toContain('stacksDir: config.stacksDir ?? `${defaultHomeDir}/stacks`')
+    expect(appSource).not.toContain("stacksDir: '/opt/stacks'")
+    expect(configSource).not.toContain("stacksDir: config.stacksDir ?? '/opt/stacks'")
+  })
+})

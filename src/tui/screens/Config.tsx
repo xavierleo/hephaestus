@@ -97,11 +97,12 @@ const FIELD_DEFS: FieldDef[] = [
 ]
 
 const DIVIDER = '─'.repeat(51)
+const defaultHomeDir = `/home/${process.env['USER'] ?? 'user'}`
 
 function configToFields(config: Partial<WizardConfig>): FieldValues {
   return {
-    baseDir: config.baseDir ?? `/home/${process.env['USER'] ?? 'user'}/docker-services`,
-    stacksDir: config.stacksDir ?? '/opt/stacks',
+    baseDir: config.baseDir ?? `${defaultHomeDir}/docker-services`,
+    stacksDir: config.stacksDir ?? `${defaultHomeDir}/stacks`,
     puid: String(config.puid ?? 1000),
     pgid: String(config.pgid ?? 1000),
     tz: config.tz ?? 'UTC',

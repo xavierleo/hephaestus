@@ -89,19 +89,8 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
   // 2 — Create base directories
   report('Creating directories', 'running')
   if (!dryRun) {
-    try {
-      mkdirSync(config.baseDir, { recursive: true })
-      mkdirSync(config.stacksDir, { recursive: true })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
-      const isPermission = msg.includes('EACCES') || msg.includes('EPERM')
-      throw new Error(
-        isPermission
-          ? `Permission denied creating ${config.baseDir} or ${config.stacksDir}. ` +
-            `Run with sudo, or choose a directory you own (e.g. ~/docker-services).`
-          : `Could not create directories: ${msg}`,
-      )
-    }
+    createDirectoryOrThrow(config.baseDir, 'base data directory')
+    createDirectoryOrThrow(config.stacksDir, 'stacks directory')
   }
   report('Creating directories', 'done')
 
@@ -199,6 +188,21 @@ export async function runScaffold(config: WizardConfig, options: ScaffoldOptions
   }
 
   return { newEnvVars }
+}
+
+export function createDirectoryOrThrow(path: string, label: string): void {
+  try {
+    mkdirSync(path, { recursive: true })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    const isPermission = msg.includes('EACCES') || msg.includes('EPERM')
+    throw new Error(
+      isPermission
+        ? `Permission denied creating ${label} at ${path}. ` +
+          `Choose a directory your user owns, or create it first with the right permissions.`
+        : `Could not create ${label} at ${path}: ${msg}`,
+    )
+  }
 }
 
 // Try to read the API key already embedded in the first seed config on disk,
