@@ -4,6 +4,7 @@ set -euo pipefail
 REPO="xavierleo/hephaestus"
 INSTALL_DIR="${HOME}/.hephaestus"
 BIN_PATH="/usr/local/bin/hephaestus"
+FNM_DIR="${HOME}/.local/share/fnm"
 
 # ── Colour helpers ─────────────────────────────────────────────────────────────
 red()   { printf '\033[31m%s\033[0m\n' "$*"; }
@@ -21,17 +22,43 @@ fi
 bold "Installing Hephaestus..."
 
 # ── Node.js 24+ ────────────────────────────────────────────────────────────────
+configure_fnm_shell() {
+  local profile=""
+  case "${SHELL:-}" in
+    */zsh) profile="${HOME}/.zshrc" ;;
+    */bash) profile="${HOME}/.bashrc" ;;
+    *) profile="${HOME}/.profile" ;;
+  esac
+
+  local marker="# Hephaestus fnm setup"
+  if [[ -f "$profile" ]] && grep -q "$marker" "$profile"; then
+    return
+  fi
+
+  {
+    echo ""
+    echo "$marker"
+    echo "export PATH=\"${FNM_DIR}:\$PATH\""
+    echo "eval \"\$(${FNM_DIR}/fnm env --shell bash)\""
+  } >> "$profile"
+}
+
 ensure_fnm() {
-  if command -v fnm &>/dev/null; then
+  if [[ -x "${FNM_DIR}/fnm" ]]; then
+    export PATH="${FNM_DIR}:${PATH}"
     return
   fi
 
-  if [[ -d "${HOME}/.local/share/fnm" ]]; then
-    export PATH="${HOME}/.local/share/fnm:${PATH}"
+  if command -v fnm &>/dev/null; then
+    FNM_BIN="$(command -v fnm)"
+    FNM_DIR="$(dirname "$FNM_BIN")"
+    export PATH="${FNM_DIR}:${PATH}"
+    configure_fnm_shell
+    return
   fi
 
-  if command -v fnm &>/dev/null; then
-    return
+  if [[ -d "${FNM_DIR}" ]]; then
+    export PATH="${FNM_DIR}:${PATH}"
   fi
 
   if ! command -v unzip &>/dev/null; then
@@ -46,18 +73,21 @@ ensure_fnm() {
   fi
 
   bold "Installing fnm..."
-  curl -fsSL https://fnm.vercel.app/install | bash
-  export PATH="${HOME}/.local/share/fnm:${PATH}"
+  curl -fsSL https://fnm.vercel.app/install | bash -s -- --install-dir "$FNM_DIR" --skip-shell
+  export PATH="${FNM_DIR}:${PATH}"
 
-  if ! command -v fnm &>/dev/null; then
+  if [[ ! -x "${FNM_DIR}/fnm" ]]; then
     red "fnm install completed, but fnm was not found on PATH."
     red "Open a new shell or install Node.js 24 manually, then run this installer again."
     exit 1
   fi
+  configure_fnm_shell
 }
 
 activate_fnm() {
-  if command -v fnm &>/dev/null; then
+  if [[ -x "${FNM_DIR}/fnm" ]]; then
+    eval "$("$FNM_DIR/fnm" env --shell bash)"
+  elif command -v fnm &>/dev/null; then
     eval "$(fnm env --shell bash)"
   fi
 }
@@ -172,13 +202,22 @@ fi
 bold "Writing ${BIN_PATH}..."
 WRAPPER="$(cat <<WRAPPER_EOF
 #!/usr/bin/env bash
-if [[ -d "\${HOME}/.local/share/fnm" ]]; then
+FNM_DIR="${FNM_DIR}"
+if [[ -x "\${FNM_DIR}/fnm" ]]; then
+  export PATH="\${FNM_DIR}:\${PATH}"
+  eval "\$("\${FNM_DIR}/fnm" env --shell bash)"
+elif [[ -d "\${HOME}/.local/share/fnm" ]]; then
   export PATH="\${HOME}/.local/share/fnm:\${PATH}"
+  if [[ -x "\${HOME}/.local/share/fnm/fnm" ]]; then
+    eval "\$("\${HOME}/.local/share/fnm/fnm" env --shell bash)"
+  fi
 fi
-if command -v fnm >/dev/null 2>&1; then
-  eval "\$(fnm env --shell bash)"
+NODE_BIN="\$(command -v node || true)"
+if [[ -z "\${NODE_BIN}" ]]; then
+  echo "Node.js is not available. Re-run the Hephaestus installer to repair the Node.js 24 runtime." >&2
+  exit 1
 fi
-exec node "${INSTALL_DIR}/dist/index.js" "\$@"
+exec "\${NODE_BIN}" "${INSTALL_DIR}/dist/index.js" "\$@"
 WRAPPER_EOF
 )"
 
