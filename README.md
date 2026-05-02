@@ -148,6 +148,12 @@ src/
 
 ---
 
+## Built with
+
+Hephaestus was built with help from [Codex](https://openai.com/codex/) and [Claude Code](https://www.anthropic.com/claude-code).
+
+---
+
 ## License
 
 MIT
