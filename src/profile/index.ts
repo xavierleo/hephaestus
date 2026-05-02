@@ -11,6 +11,7 @@ export type { Profile, ProfileConfig, ProfileStore }
 const DEFAULT_PROFILES_PATH = path.join(
   os.homedir(), '.config', 'hephaestus', 'profiles.json',
 )
+const LEGACY_DEFAULT_STACKS_DIR = '/opt/stacks'
 
 function atomicWrite(filePath: string, content: string): void {
   const tmp = `${filePath}.tmp`
@@ -127,11 +128,12 @@ export function mergeWithDetected(
   const p = profile.config
   const puid = detected.puid ?? p.puid
   const dockerRootless = p.dockerRootless
+  const stacksDir = normalizeStacksDir(p.stacksDir, p.baseDir)
 
   return {
     // saved values win — user explicitly configured these
     baseDir:          p.baseDir,
-    stacksDir:        p.stacksDir,
+    stacksDir,
     domain:           p.domain,
     hostIp:           p.hostIp,
     mediaDir:         p.mediaDir,
@@ -156,4 +158,10 @@ export function mergeWithDetected(
     dockerSocketPath: deriveDockerSocketPath(dockerRootless, puid),
     selectedServices: profile.defaultServices,
   }
+}
+
+function normalizeStacksDir(stacksDir: string, baseDir: string): string {
+  if (stacksDir !== LEGACY_DEFAULT_STACKS_DIR) return stacksDir
+  const parent = path.dirname(baseDir || os.homedir())
+  return path.join(parent, 'stacks')
 }

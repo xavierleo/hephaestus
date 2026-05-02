@@ -232,7 +232,12 @@ describe('mergeWithDetected', () => {
   })
 
   it('saved values win for baseDir, stacksDir, domain, hostIp, mediaDir', () => {
-    const profile = makeProfile()
+    const profile = makeProfile({
+      config: {
+        ...makeProfile().config,
+        stacksDir: '/srv/hephaestus/stacks',
+      },
+    })
     const detected: Partial<WizardConfig> = {
       // even if detected had these (unusual, but guard against it)
       puid: 1001,
@@ -245,6 +250,13 @@ describe('mergeWithDetected', () => {
     expect(result.domain).toBe(profile.config.domain)
     expect(result.hostIp).toBe(profile.config.hostIp)
     expect(result.mediaDir).toBe(profile.config.mediaDir)
+  })
+
+  it('migrates the legacy /opt/stacks default to a user-owned stacks directory', () => {
+    const profile = makeProfile()
+    const result = mergeWithDetected(profile, { puid: 1001 })
+
+    expect(result.stacksDir).toBe('/home/user/stacks')
   })
 
   it('selectedServices comes from profile.defaultServices', () => {
