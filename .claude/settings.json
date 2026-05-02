@@ -11,7 +11,10 @@
       "Bash(git commit *)",
       "Bash(git -C /Users/xavier/Projects/Hephaestus/Code/hephaestus add src/__tests__/profile.test.ts)",
       "Bash(git -C /Users/xavier/Projects/Hephaestus/Code/hephaestus commit -m ' *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "WebSearch",
+      "WebFetch(domain:docs.linuxserver.io)",
+      "WebFetch(domain:hub.docker.com)"
     ]
   }
 }
