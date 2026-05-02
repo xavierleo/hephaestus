@@ -222,7 +222,9 @@ export function App({ flags }: AppProps) {
     return (
       <Box flexDirection="column" padding={1}>
         <Text color="green" bold>✓ Scaffold complete!</Text>
-        <Text dimColor>Your stacks are in {config.stacksDir}. Run: docker compose up -d</Text>
+        <Text dimColor>Your stacks are in {config.stacksDir}.</Text>
+        <Text dimColor>{'Next: cd <stack-dir> && docker compose up -d'}</Text>
+        <Text dimColor>{'Press q to exit'}</Text>
       </Box>
     )
   }
