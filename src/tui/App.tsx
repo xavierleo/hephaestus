@@ -16,6 +16,7 @@ import { allRecipes } from '../recipes/registry.js'
 import type { Profile } from '../profile/types.js'
 import { SaveProfile } from './screens/SaveProfile.js'
 import { ProfileManager } from './screens/ProfileManager.js'
+import { PresetSelector } from './screens/PresetSelector.js'
 
 interface AppProps {
   flags: AppFlags
@@ -170,6 +171,16 @@ export function App({ flags }: AppProps) {
   if (screen === 'SERVICE_SELECTOR') {
     return (
       <ServiceSelector
+        config={config}
+        onNext={updates => advance(updates)}
+        onBack={goBack}
+      />
+    )
+  }
+
+  if (screen === 'PRESET_SELECTOR') {
+    return (
+      <PresetSelector
         config={config}
         onNext={updates => advance(updates)}
         onBack={goBack}

@@ -3,6 +3,7 @@ export type WizardScreen =
   | 'WELCOME'
   | 'DOCKER_MODE'
   | 'CONFIG'
+  | 'PRESET_SELECTOR'
   | 'SERVICE_SELECTOR'
   | 'REVIEW'
   | 'PROGRESS'
@@ -15,6 +16,7 @@ export const SCREEN_ORDER: WizardScreen[] = [
   'WELCOME',
   'DOCKER_MODE',
   'CONFIG',
+  'PRESET_SELECTOR',
   'SERVICE_SELECTOR',
   'REVIEW',
   'PROGRESS',
